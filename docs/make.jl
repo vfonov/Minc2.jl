@@ -8,7 +8,7 @@ makedocs(
     pages = [
         "Index" => "index.md",
         "Second page" => "secondPage.md"
-    ]
+    ],
     format = Documenter.HTML(prettyurls = false),
     modules = [Minc2]
 )
