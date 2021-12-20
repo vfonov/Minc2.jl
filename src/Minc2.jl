@@ -1,25 +1,20 @@
 module Minc2
 
-greet() = print("Hello World!")
+    using CBinding
+    using LIBMINC_jll
+    # Main.SYSROOT...,
+	c`$([
+		
+		
+		"-I$(LIBMINC_jll.artifact_dir)/include",
+		"-L$(dirname(LIBMINC_jll.libminc2_path))", 
+        "-L$(dirname(LIBMINC_jll.libminc2_simple_path))", 
+        "-llibminc2-simple","-llibminc2",
+	])`
 
-export volume_plus
+    c"""
+    #include <minc2-simple.h>
+    """ji
 
-"""
-    volume_plus(x)
-
-Dummy volume function
-# Arguments
-* `x`: the input value
-
-# Notes
-* I will add notes
-
-# Examples
-```julia
-julia> two = volume_plus(1)
-2
-```
-"""
-volume_plus(x) = return x+1
 
 end # module
