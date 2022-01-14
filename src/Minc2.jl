@@ -223,11 +223,25 @@ module Minc2
         return _hdr_convert!(hdr,dd)
     end
 
+
+    """
+    Read the actual volume using handle
+    return volume, storage header
+    """
+    function read_minc_volume(h::VolumeHandle, ::Type{T}=Float32 ) where {T}
+        # TODO: use ImageMetadata to store header contents?
+        store_hdr = store_header( h )
+        volume = Array{T}(undef, store_hdr.dims...)
+
+        @minc2_check minc2_simple.minc2_load_complete_volume(h.x[], Base.unsafe_convert(Ptr{Cvoid},volume), julia_to_minc2[Type{T}] )
+        return volume, store_hdr
+    end
+
     """
     Read the actual volume using handle
     return volume, representation header,storage header
     """
-    function read_minc_volume(h::VolumeHandle, ::Type{T}=Float32 ) where {T}
+    function read_minc_volume_std(h::VolumeHandle, ::Type{T}=Float32 ) where {T}
         # TODO: use ImageMetadata to store header contents?
         setup_standard_order( h )
         store_hdr = store_header( h )
@@ -242,21 +256,44 @@ module Minc2
     Read the actual volume using path
     return volume, representation header,storage header
     """
-    function read_minc_volume(path::String, ::Type{T}=Float32 ) where {T}
+    function read_minc_volume_std(path::String, ::Type{T}=Float32 ) where {T}
         handle = open_minc_file(path)
-        volume, hdr, store_hdr = read_minc_volume(handle,T)
+        volume, hdr, store_hdr = read_minc_volume_std(handle,T)
         close_minc_file(handle)
 
         return volume, hdr, store_hdr
     end
 
     """
+    Read the actual volume using path
+    return volume, representation header,storage header
+    """
+    function read_minc_volume(path::String, ::Type{T}=Float32 ) where {T}
+        handle = open_minc_file(path)
+        volume, store_hdr = read_minc_volume(handle,T)
+        close_minc_file(handle)
+
+        return volume, store_hdr
+    end
+
+
+    """
     write full volume to file, file should be defined and created
     return nothing
     """
     function write_minc_volume(h::VolumeHandle, volume::Array{T} ) where {T}
-        setup_standard_order( h )
         @minc2_check minc2_simple.minc2_save_complete_volume(h.x[], Base.unsafe_convert(Ptr{Cvoid},volume),julia_to_minc2[Type{T}])
+        return nothing
+    end
+
+
+    """
+    write full volume to file, file should be defined and created
+    return nothing
+    """
+    function write_minc_volume_std(h::VolumeHandle, volume::Array{T} ) where {T}
+        setup_standard_order( h )
+        write_minc_volume(h,volume)
         return nothing
     end
 
@@ -349,10 +386,55 @@ module Minc2
     write full volume to file, need to provide details of file structure
     return nothing
     """
+    function write_minc_volume_std(path::String, ::Type{Store}, 
+            store_hdr::Union{MincHeader, Nothing}, 
+            volume::Array{Repr};like::Union{String, Nothing}=nothing, 
+            history::Union{String, Nothing}=nothing ) where {Store,Repr}
+        
+        if isdefined(like)
+            # TODO: check if store_hdr is compatible with volume
+
+            handle = define_minc_file(store_hdr, Store, Repr)
+            Minc2.create_minc_file(handle,path)
+
+            if isdefined(history)
+                write_minc_history(handle,history)
+            end
+
+            Minc2.write_minc_volume_std(handle,volume)
+            close_minc_file(handle)
+        else
+            # need to copy file structure
+            in_h = open_minc_file(like)
+            store_hdr = store_header( in_h )
+
+            # TODO: check if store_hdr is compatible with volume
+            handle = define_minc_file(store_hdr, Store, Repr)
+            Minc2.create_minc_file(handle,path)
+            
+            copy_minc_metadata(in_h,handle)
+
+            if isdefined(history)
+                write_minc_history(handle,history)
+            end
+
+            Minc2.write_minc_volume_std(handle,volume)
+            close_minc_file(in_h)
+            close_minc_file(handle)
+        end
+
+        return nothing
+    end
+
+    """
+    write full volume to file, need to provide details of file structure
+    return nothing
+    """
     function write_minc_volume(path::String, ::Type{Store}, 
             store_hdr::Union{MincHeader, Nothing}, 
             volume::Array{Repr};like::Union{String, Nothing}=nothing, 
             history::Union{String, Nothing}=nothing ) where {Store,Repr}
+        
         if isdefined(like)
             # TODO: check if store_hdr is compatible with volume
 
