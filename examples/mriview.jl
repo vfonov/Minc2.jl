@@ -10,7 +10,9 @@ using Statistics
 
 function mriview(path, zoom::Int=5)
     a = Minc2.open_minc_file(path)
-    hdr, mri=Minc2.read_minc_volume(a)
+    mri, = Minc2.read_minc_volume(a,Float32)
+
+    println(typeof(mri))
 
     scaler = scaleminmax(minimum(mri),maximum(mri))
 
