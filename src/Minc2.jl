@@ -39,15 +39,15 @@ module Minc2
 
     # map Julia types to minc2 data types
     julia_to_minc2 = Dict(
-       Type{Int8} => Cint(minc2_simple.MINC2_BYTE ),
-       Type{Int16}    =>Cint(minc2_simple.MINC2_SHORT),
-       Type{Int32}      => Cint(minc2_simple.MINC2_INT ),
-       Type{Float32}    => Cint(minc2_simple.MINC2_FLOAT ),
-       Type{Float64}   => Cint(minc2_simple.MINC2_DOUBLE ),
+       Type{Int8}     => Cint(minc2_simple.MINC2_BYTE ),
+       Type{Int16}    => Cint(minc2_simple.MINC2_SHORT),
+       Type{Int32}    => Cint(minc2_simple.MINC2_INT ),
+       Type{Float32}  => Cint(minc2_simple.MINC2_FLOAT ),
+       Type{Float64}  => Cint(minc2_simple.MINC2_DOUBLE ),
        Type{String}   => Cint(minc2_simple.MINC2_STRING ),
        Type{UInt8}    => Cint(minc2_simple.MINC2_UBYTE ),
        Type{UInt16}   => Cint(minc2_simple.MINC2_USHORT ),
-       Type{UInt32}     => Cint(minc2_simple.MINC2_UINT ),
+       Type{UInt32}   => Cint(minc2_simple.MINC2_UINT ),
        Type{Complex{Int16}} => Cint(minc2_simple.MINC2_SCOMPLEX ),
        Type{Complex{Int32}} => Cint(minc2_simple.MINC2_ICOMPLEX ),
        Type{Complex{Float32}} => Cint(minc2_simple.MINC2_FCOMPLEX ),
@@ -138,7 +138,7 @@ module Minc2
         # TODO: fix this
         _global_scaling = 0
         _slice_scaling  = 0 
-        if _store_type != _representation_type
+        if _store_type != _representation_type && !(Store==Float32 && Repr==Float64 || Store==Float64 && Repr==Float32)
             _global_scaling = 1 # slice scaling is not completely supported yet in minc2-simple
             #_slice_scaling = 1
         end
@@ -433,7 +433,7 @@ module Minc2
     function write_minc_volume_raw(path::String, ::Type{Store}, 
             store_hdr::Union{MincHeader, Nothing}, 
             volume::Array{Repr};like::Union{String, Nothing}=nothing, 
-            history::Union{String, Nothing}=nothing ) where {Store,Repr}
+            history::Union{String, Nothing}=nothing ) where {Store, Repr}
         
         if isnothing(like)
             # TODO: check if store_hdr is compatible with volume
@@ -445,7 +445,7 @@ module Minc2
                 write_minc_history(handle,history)
             end
 
-            write_minc_volume_raw(handle,volume)
+            write_minc_volume_raw(handle, volume)
             close_minc_file(handle)
         else
             # need to copy file structure
