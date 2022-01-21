@@ -311,7 +311,7 @@ module Minc2
     :param attribute: attribute name
     :return:
     """
-    function read_minc_attribute(h::VolumeHandle, group::String, attribute::String)
+    function read_minc_attribute(h::VolumeHandle, group::String, attribute::String)::Union{String,AbstractVector,Nothing}
 
         attr_type  = Ref{Int}(0)
         attr_length = Ref{Int}(0)
@@ -321,29 +321,57 @@ module Minc2
         @minc2_check minc2_simple.minc2_get_attribute_type(h.x[], group, attribute, attr_type)
         @minc2_check minc2_simple.minc2_get_attribute_length(h.x[], group, attribute, attr_length)
         
-        buf = missing
-
-        if attr_type[] == minc2_simple.MINC2_STRING
+        # assume that array of BYTES is a string 
+        # TODO: make sure it's a good assumption
+        if attr_type[] == minc2_simple.MINC2_STRING 
             _buf = Vector{UInt8}(undef,attr_length[])
             @minc2_check minc2_simple.minc2_read_attribute(h.x[], group, attribute, _buf, attr_length[])
-            buf = String(_buf)
-        else
+            return String(_buf)
+        elseif attr_type[] == minc2_simple.MINC2_FLOAT
             # TODO: finish this
-            throw(SystemError("MINC2 not implemented"))
-            # data_type = attr_type[0]
-            # buf=None
-            # if data_type in minc2_file.__minc2_to_numpy:
-            #     dtype=minc2_file.__minc2_to_numpy[data_type]
-            #     shape=[attr_length[0]]
-            #     buf=np.empty(shape,dtype,'C')
-            # else:
-            #     raise minc2_error("Error determining attribute type {}:{}".format(group,attribute))
-
-            # if lib.minc2_read_attribute(self._v,group,attribute,ffi.cast("void *", buf.ctypes.data),attr_length[0])!=lib.MINC2_SUCCESS:
-            #     raise minc2_error("Error reading attribute {}:{}".format(group,attribute))
+            buf = Vector{Float32}(undef,attr_length[])
+            @minc2_check minc2_simple.minc2_read_attribute(h.x[], group, attribute, buf, attr_length[])
+            return buf
+        elseif attr_type[] == minc2_simple.MINC2_DOUBLE
+            # TODO: finish this
+            buf = Vector{Float64}(undef,attr_length[])
+            @minc2_check minc2_simple.minc2_read_attribute(h.x[], group, attribute, buf, attr_length[])
+            return buf
+        elseif attr_type[] == minc2_simple.MINC2_INT
+            # TODO: finish this
+            buf = Vector{Int32}(undef,attr_length[])
+            @minc2_check minc2_simple.minc2_read_attribute(h.x[], group, attribute, buf, attr_length[])
+            return buf
+        elseif attr_type[] == minc2_simple.MINC2_SHORT
+            # TODO: finish this
+            buf = Vector{Int16}(undef,attr_length[])
+            @minc2_check minc2_simple.minc2_read_attribute(h.x[], group, attribute, buf, attr_length[])
+            return buf
+        elseif attr_type[] == minc2_simple.MINC2_UINT
+            # TODO: finish this
+            buf = Vector{UInt32}(undef,attr_length[])
+            @minc2_check minc2_simple.minc2_read_attribute(h.x[], group, attribute, buf, attr_length[])
+            return buf
+        elseif attr_type[] == minc2_simple.MINC2_USHORT
+            # TODO: finish this
+            buf = Vector{UInt16}(undef,attr_length[])
+            @minc2_check minc2_simple.minc2_read_attribute(h.x[], group, attribute, buf, attr_length[])
+            return buf
+        elseif attr_type[] == minc2_simple.MINC2_BYTE
+            # TODO: finish this
+            buf = Vector{Int8}}(undef,attr_length[])
+            @minc2_check minc2_simple.minc2_read_attribute(h.x[], group, attribute, buf, attr_length[])
+            return buf
+        elseif attr_type[] == minc2_simple.MINC2_UBYTE
+            # TODO: finish this
+            buf = Vector{UInt8}}(undef,attr_length[])
+            @minc2_check minc2_simple.minc2_read_attribute(h.x[], group, attribute, buf, attr_length[])
+            return buf
+        else
+            throw(SystemError("MINC2 unsupported data type"))
         end
 
-        return buf
+        return nothing
     end
 
 
