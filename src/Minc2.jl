@@ -311,7 +311,7 @@ module Minc2
     :param attribute: attribute name
     :return:
     """
-    function read_minc_attribute(h::VolumeHandle, group::String, attribute::String)::Union{String,AbstractVector,Nothing}
+    function read_attribute(h::VolumeHandle, group::String, attribute::String)::Union{String,AbstractVector,Nothing}
 
         attr_type  = Ref{Int}(0)
         attr_length = Ref{Int}(0)
@@ -410,7 +410,7 @@ module Minc2
     :param value:  attribute value
     :return:
     """
-    function write_minc_attribute(h::VolumeHandle, group::String, attribute::String, value::T) where {T}
+    function write_attribute(h::VolumeHandle, group::String, attribute::String, value::T) where {T}
         val_type = julia_to_minc2[Type{T}]
         attr_length = length(value)
         # TODO: make this work for other type
@@ -426,15 +426,15 @@ module Minc2
     """
     return history string
     """
-    function read_minc_history(i::VolumeHandle)::Union{String, Missing}
-        return read_minc_attribute(i,"","history")
+    function read_history(i::VolumeHandle)::Union{String, Missing}
+        return read_attribute(i,"","history")
     end
 
     """
     write history string
     """
-    function write_minc_history(i::VolumeHandle,history::String)
-        write_minc_attribute(i,"","history",history)
+    function write_history(i::VolumeHandle,history::String)
+        write_attribute(i,"","history",history)
     end
 
 
