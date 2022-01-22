@@ -359,12 +359,12 @@ module Minc2
             return buf
         elseif attr_type[] == minc2_simple.MINC2_BYTE
             # TODO: finish this
-            buf = Vector{Int8}}(undef,attr_length[])
+            buf = Vector{Int8}(undef,attr_length[])
             @minc2_check minc2_simple.minc2_read_attribute(h.x[], group, attribute, buf, attr_length[])
             return buf
         elseif attr_type[] == minc2_simple.MINC2_UBYTE
             # TODO: finish this
-            buf = Vector{UInt8}}(undef,attr_length[])
+            buf = Vector{UInt8}(undef,attr_length[])
             @minc2_check minc2_simple.minc2_read_attribute(h.x[], group, attribute, buf, attr_length[])
             return buf
         else
@@ -372,6 +372,34 @@ module Minc2
         end
 
         return nothing
+    end
+
+    function groups(h::VolumeHandle)
+        i = Ref(minc2_simple.minc2_allocate_info_iterator())
+        r = Vector{String}()
+        try
+            @minc2_check minc2_simple.minc2_start_group_iterator(h.x[],i[])
+            while minc2_simple.minc2_iterator_group_next(i[]) == minc2_simple.MINC2_SUCCESS
+                push!(r,unsafe_string(minc2_simple.minc2_iterator_group_name(i[])))
+            end
+        finally
+            @minc2_check minc2_simple.minc2_free_info_iterator(i[])
+        end
+        return r
+    end
+
+    function attributes(h::VolumeHandle, g::String)
+        i = Ref(minc2_simple.minc2_allocate_info_iterator())
+        r = Vector{String}()
+        try
+            @minc2_check minc2_simple.minc2_start_attribute_iterator(h.x[],g,i[])
+            while minc2_simple.minc2_iterator_attribute_next(i[]) == minc2_simple.MINC2_SUCCESS
+                push!(r,unsafe_string(minc2_simple.minc2_iterator_attribute_name(i[])))
+            end
+        finally
+            @minc2_check minc2_simple.minc2_free_info_iterator(i[])
+        end
+        return r
     end
 
 
