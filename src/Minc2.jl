@@ -21,7 +21,9 @@ module Minc2
     using CBinding
     using .minc2_simple
 
-
+    """
+    Axis typed from MINC volume, TODO: make this compatible with NIFTI ?
+    """
     @enum DIM begin
         DIM_UNKNOWN = Cint(minc2_simple.MINC2_DIM_UNKNOWN)
         DIM_X = Cint(minc2_simple.MINC2_DIM_X  )
@@ -32,12 +34,16 @@ module Minc2
         DIM_END  = Cint(minc2_simple.MINC2_DIM_END)
     end
 
-    # TODO: double check?
+    """
+    Mapping MINC2 spatial dimensions to proper spatial dimension (should be identity for spatial dims)
+    """
     minc2_spatial=Dict(Cint(minc2_simple.MINC2_DIM_X)=>1,
                        Cint(minc2_simple.MINC2_DIM_Y)=>2,
                        Cint(minc2_simple.MINC2_DIM_Z)=>3)
 
-    # map Julia types to minc2 data types
+    """
+    map Julia types to minc2 data types
+    """
     julia_to_minc2 = Dict(
        Type{Int8}     => Cint(minc2_simple.MINC2_BYTE ),
        Type{Int16}    => Cint(minc2_simple.MINC2_SHORT),
@@ -58,19 +64,30 @@ module Minc2
     const _minc2_dimension=c"minc2_simple.struct minc2_dimension"
     
 
-    # map MINC2 types to Julia
+    """
+    map MINC2 types to Julia
+    """
     minc2_to_julia=Dict([(j,i) for (i,j) in julia_to_minc2])
 
+    """
+    minc2_simple API status
+    """
     @enum STATUS begin
         # minc2 status
         SUCCESS  = Cint(minc2_simple.MINC2_SUCCESS)
         ERROR    = Cint(minc2_simple.MINC2_ERROR)
     end
 
+    """
+    Maro to verify the return code
+    """
     macro minc2_check( ex ) # STATUS::SUCCESS
         return :($(esc(ex)) == 0 ? $(nothing) : throw(SystemError("MINC2 error")))
     end
 
+    """
+    minc2_simple volume handle
+    """
     mutable struct VolumeHandle
         x::Ref
         function VolumeHandle()
@@ -324,7 +341,8 @@ module Minc2
         # assume that array of BYTES is a string 
         # TODO: make sure it's a good assumption
         if attr_type[] == minc2_simple.MINC2_STRING 
-            _buf = Vector{UInt8}(undef,attr_length[])
+            # remove trailing 0
+            _buf = Vector{UInt8}(undef,attr_length[]-1) 
             @minc2_check minc2_simple.minc2_read_attribute(h.x[], group, attribute, _buf, attr_length[])
             return String(_buf)
         elseif attr_type[] == minc2_simple.MINC2_FLOAT
@@ -374,6 +392,9 @@ module Minc2
         return nothing
     end
 
+    """
+    List groups defined in minc2 file
+    """
     function groups(h::VolumeHandle)
         i = Ref(minc2_simple.minc2_allocate_info_iterator())
         r = Vector{String}()
@@ -388,6 +409,10 @@ module Minc2
         return r
     end
 
+
+    """
+    List attributes defined inside given group
+    """
     function attributes(h::VolumeHandle, g::String)
         i = Ref(minc2_simple.minc2_allocate_info_iterator())
         r = Vector{String}()
@@ -401,7 +426,6 @@ module Minc2
         end
         return r
     end
-
 
     """
     Store attribute into minc2 file
