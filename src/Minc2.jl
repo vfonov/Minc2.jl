@@ -99,17 +99,26 @@ module Minc2
     end
 
     """
-    Structure describing spatial orientation of the minc file
+    Structure describing spatial orientation and sampling  of the minc file 
     """
     mutable struct MincHeader
+        " Dimensions in voxels"
         dims::Vector{Int32}
+        " Start offset (not origin)"
         start::Vector{Float64}
+        " Sampling step"
         step::Vector{Float64}
+        " Basis vector (direction cosine)"
         dir_cos::Matrix{Float64}
+        " Flag that dir_cos contains valid information"
         dir_cos_valid::Vector{Bool}
         # TODO: figure out how to make it compatible with other libraries
+        " Axis ID, see [DIM]"
         axis::Vector{Int32}
 
+        """
+        Consrtuct header with given number of dimensions
+        """
         function MincHeader(ndim)
             new(zeros(ndim),
                 zeros(ndim), 
@@ -194,6 +203,9 @@ module Minc2
         @minc2_check minc2_simple.minc2_setup_standard_order(h.x[])
     end
     
+    """
+    internal function
+    """
     function _hdr_convert!(hdr,dd)
         for i = 1:length(hdr.start)
             hdr.dims[i] = dd[][i].length
@@ -239,7 +251,6 @@ module Minc2
 
         return _hdr_convert!(hdr,dd)
     end
-
 
     """
     Read the actual volume using handle
@@ -550,5 +561,6 @@ module Minc2
         return nothing
     end
 
+    
 
 end # module
