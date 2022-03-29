@@ -222,7 +222,7 @@ module Minc2
     end
 
     """
-    Prepare to read volume in standard order: [TIME,Z,Y,X,V]
+    Prepare to read volume in standard order: [V,X,Y,Z,TIME]
     """
     function setup_standard_order(h::VolumeHandle)
         @minc2_check minc2_simple.minc2_setup_standard_order(h.x[])
@@ -299,6 +299,7 @@ module Minc2
         setup_standard_order( h )
         store_hdr = store_header( h )
         hdr = representation_header( h )
+
         volume = Array{T}(undef, hdr.dims...)
 
         @minc2_check minc2_simple.minc2_load_complete_volume(h.x[], Base.unsafe_convert(Ptr{Cvoid},volume), julia_to_minc2[Type{T}] )
