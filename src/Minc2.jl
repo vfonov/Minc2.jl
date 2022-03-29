@@ -26,12 +26,23 @@ module Minc2
     """
     @enum DIM begin
         DIM_UNKNOWN = Cint(minc2_simple.MINC2_DIM_UNKNOWN)
-        DIM_X = Cint(minc2_simple.MINC2_DIM_X  )
-        DIM_Y = Cint(minc2_simple.MINC2_DIM_Y )
-        DIM_Z = Cint(minc2_simple.MINC2_DIM_Z )
+        DIM_X    = Cint(minc2_simple.MINC2_DIM_X )
+        DIM_Y    = Cint(minc2_simple.MINC2_DIM_Y )
+        DIM_Z    = Cint(minc2_simple.MINC2_DIM_Z )
         DIM_TIME = Cint(minc2_simple.MINC2_DIM_TIME )
         DIM_VEC  = Cint(minc2_simple.MINC2_DIM_VEC )
-        DIM_END  = Cint(minc2_simple.MINC2_DIM_END)
+        DIM_END  = Cint(minc2_simple.MINC2_DIM_END )
+    end
+
+    """
+    Axis typed from MINC volume, TODO: make this compatible with NIFTI ?
+    """
+    @enum XFM begin
+        MINC2_XFM_LINEAR                 = Cint(minc2_simple.MINC2_XFM_LINEAR)
+        MINC2_XFM_THIN_PLATE_SPLINE      = Cint(minc2_simple.MINC2_XFM_THIN_PLATE_SPLINE)
+        MINC2_XFM_USER_TRANSFORM         = Cint(minc2_simple.MINC2_XFM_USER_TRANSFORM)
+        MINC2_XFM_CONCATENATED_TRANSFORM = Cint(minc2_simple.MINC2_XFM_CONCATENATED_TRANSFORM)
+        MINC2_XFM_GRID_TRANSFORM         = Cint(minc2_simple.MINC2_XFM_GRID_TRANSFORM)
     end
 
     """
@@ -58,7 +69,7 @@ module Minc2
        Type{Complex{Int32}} => Cint(minc2_simple.MINC2_ICOMPLEX ),
        Type{Complex{Float32}} => Cint(minc2_simple.MINC2_FCOMPLEX ),
        Type{Complex{Float64}} => Cint(minc2_simple.MINC2_DCOMPLEX ),
-       Type{Any}  => Cint(minc2_simple.MINC2_UNKNOWN)
+       Type{Any}      => Cint(minc2_simple.MINC2_UNKNOWN)
     )
 
     const _minc2_dimension=c"minc2_simple.struct minc2_dimension"
@@ -97,6 +108,20 @@ module Minc2
           return ret
         end
     end
+
+    """
+    minc2_simple XFM transform handle
+    """
+    mutable struct TransformHandle
+        x::Ref
+        function TransformHandle()
+          ret = new( Ref(minc2_simple.minc2_xfm_allocate0()) )
+
+          finalizer(x -> c"minc2_simple.minc2_xfm_destroy"(x[]), ret.x)
+          return ret
+        end
+    end
+
 
     """
     Structure describing spatial orientation and sampling  of the minc file 
@@ -197,7 +222,7 @@ module Minc2
     end
 
     """
-    Prepare to read volume in standard order: [V,X,Y,Z,TIME]
+    Prepare to read volume in standard order: [TIME,Z,Y,X,V]
     """
     function setup_standard_order(h::VolumeHandle)
         @minc2_check minc2_simple.minc2_setup_standard_order(h.x[])
@@ -328,7 +353,7 @@ module Minc2
     """
     Copy metadata from one file to another
     """
-    function copy_minc_metadata(i::VolumeHandle,o::VolumeHandle)
+    function copy_minc_metadata(i::VolumeHandle, o::VolumeHandle)
         @minc2_check minc2_simple.minc2_copy_metadata(i.x[],o.x[])
     end
     
@@ -339,7 +364,9 @@ module Minc2
     :param attribute: attribute name
     :return:
     """
-    function read_attribute(h::VolumeHandle, group::String, attribute::String)::Union{String,AbstractVector,Nothing}
+    function read_attribute(h::VolumeHandle, 
+            group::String,
+            attribute::String)::Union{String,AbstractVector,Nothing}
 
         attr_type  = Ref{Int}(0)
         attr_length = Ref{Int}(0)
@@ -472,6 +499,26 @@ module Minc2
         write_attribute(i,"","history",history)
     end
 
+    """
+    convert world coordinates (X,Y,Z) to contignuous voxel indexes (I,J,K) 0-based
+    """
+    function world_to_voxel(h::VolumeHandle, xyz::Vector{Float64})::Vector{Float64}
+        # TODO: check input vector size (?)
+        @assert(length(xyz)==3)
+        ijk::Vector{Float64}=zeros(Float64,3)
+        @minc2_check minc2_simple.minc2_world_to_voxel(h.x[],xyz,ijk)
+        return ijk
+    end
+
+    """
+    convert contignuous 0-based voxel indexes (I,J,K) to world coordinates (X,Y,Z) 0-based
+    """
+    function voxel_to_world(h::VolumeHandle,ijk::Vector{Float64})::Vector{Float64}
+        @assert(length(ijk)==3)
+        xyz::Vector{Float64}=zeros(Float64,3)
+        @minc2_check minc2_simple.minc2_voxel_to_world(h.x[],ijk,xyz)
+        return ijk
+    end
 
     """
     write full volume to file, need to provide details of file structure
@@ -561,6 +608,107 @@ module Minc2
         return nothing
     end
 
-    
+    """
+    Open transform xfm file, return handle
+    """
+    function open_xfm_file(fname::String)::TransformHandle
+        h = TransformHandle()
+        @minc2_check minc2_simple.minc2_xfm_open(h.x[], fname)
+        return h
+    end
 
+    """
+    Save information into file
+    """
+    function save_xfm_file(h::TransformHandle , path::String)
+        @minc2_check  minc2_simple.minc2_xfm_save(h.x[],path)
+    end
+
+    """
+    Transform point x,y,z
+    """
+    function transform_point(h::TransformHandle, xyz::Vector{Float64})::Vector{Float64}
+        xyz_out=zeros(Float64,3)
+        @minc2_check  minc2_simple.minc2_xfm_transform_point(h.x[],xyz,xyz_out)
+        return xyz_out
+    end
+    
+    """
+    Transform point x,y,z
+    """
+    function inverse_transform_point(h::TransformHandle, xyz::Vector{Float64})::Vector{Float64}
+        xyz_out=zeros(Float64,3)
+        @minc2_check  minc2_simple.minc2_xfm_inverse_transform_point(h.x[],xyz,xyz_out)
+        return xyz_out
+    end
+
+    """
+    Invert transform
+    """
+    function invert_transform(h::TransformHandle)
+        @minc2_check  minc2_simple.minc2_xfm_invert(h.x[])
+    end
+
+    """
+    Get number of transformations
+    """
+    function get_n_concat(h::TransformHandle)
+        n = Ref{Int}(0)
+        @minc2_check minc2_simple.minc2_xfm_get_n_concat( h.x[], n )
+        return n[]
+    end
+
+    """
+    Get transform type 
+    """
+    function get_n_type(h::TransformHandle;n::Int32=0)
+        t = Ref{Int}(0)
+        @minc2_check minc2_simple.minc2_xfm_get_n_type( h.x[], t )
+        return t[]
+    end
+
+    function get_grid_transform(h::TransformHandle;n::Int32=0)        
+        c_file=Ref{c"char *"}()
+        inv=Ref{Int}(0)
+
+        @minc2_check minc2_simple.minc2_xfm_get_grid_transform(h.x[],n,inv,c_file)
+        r=String(c_file)
+        Libc.free(ptr)
+
+        return (r,r[]!=0)
+    end
+
+    function get_linear_transform(h::TransformHandle;n::Int32=0)
+        mat=zeros(Float64,4,4)
+        @minc2_check minc2_simple.minc2_xfm_get_linear_transform(h.x[],n,mat)
+        return mat
+    end
+
+    function get_linear_transform_param(h::TransformHandle;n::Int64=0,center::Union{Nothing,Vector{Float64}}=nothing)
+        if isnothing(center)
+            center=zeros(Float64,3)
+        end
+
+        translations=zeros(Float64,3)
+        scales=zeros(Float64,3)
+        scales=zeros(Float64,3)
+        shears=zeros(Float64,3)
+        rotations=zeros(Float64,3)
+        @minc2_check minc2_simple.minc2_xfm_extract_linear_param(h.x[],n,center,translations,scales,shears,rotations)
+
+        return (center=center,translations=translations,scales=scales,shears=shears,rotations=rotations)
+    end
+
+    function append_linear_transform(h::TransformHandle,lin::Matrix{Float64})
+        @minc2_check minc2_simple.minc2_xfm_append_linear_transform(h.x[],lin)
+    end
+
+    # TODO: 
+    function append_grid_transform(h::TransformHandle,grid_file::String;inv::Bool=false)
+        @minc2_check minc2_simple.append_grid_transform(h.x[],grid_file,inv)
+    end
+
+    function concat_xfm(h::TransformHandle,i::TransformHandle)
+        @minc2_check minc2_simple.minc2_xfm_concat_xfm(h.x[], i.x[])
+    end
 end # module
