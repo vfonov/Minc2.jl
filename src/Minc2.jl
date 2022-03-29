@@ -347,7 +347,7 @@ module Minc2
     """
     function write_minc_volume_std(h::VolumeHandle, volume::Array{T} ) where {T}
         setup_standard_order( h )
-        write_minc_volume(h,volume)
+        write_minc_volume_raw(h, volume)
         return nothing
     end
 
