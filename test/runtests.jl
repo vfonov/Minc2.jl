@@ -134,19 +134,35 @@ end
     @test means ≈ expected_means atol=0.001 # ??
 end
 
-@testset "Writing 3D volumes" begin
+@testset "Writing 3D volume in Float64" begin
     mktempdir() do tmp
         in_vol,in_hdr,in_stor_hdr=Minc2.read_minc_volume_std("input/t1_z+_double_cor.mnc", Float64)
 
-        Minc2.write_minc_volume_std(joinpath(tmp,"test1.mnc"),Float64,in_stor_hdr,in_vol)
+        Minc2.write_minc_volume_std(joinpath(tmp,"test1.mnc"), Float64, in_stor_hdr, in_vol)
 
-        out_vol,out_hdr,out_stor_hdr=Minc2.read_minc_volume_std(joinpath(tmp,"test1.mnc"), Float64)
+        out_vol,out_hdr,out_stor_hdr = Minc2.read_minc_volume_std(joinpath(tmp,"test1.mnc"), Float64)
 
         @test in_hdr.dims == out_hdr.dims
         @test in_hdr.start == out_hdr.start
         @test in_hdr.step == out_hdr.step
         @test in_hdr.dir_cos == out_hdr.dir_cos
         @test in_vol ≈ out_vol
+    end
+end
+
+@testset "Writing 3D volume in short" begin
+    mktempdir() do tmp
+        in_vol,in_hdr,in_stor_hdr=Minc2.read_minc_volume_std("input/t1_z+_double_cor.mnc", Float64)
+
+        Minc2.write_minc_volume_std(joinpath(tmp,"test1.mnc"), Int16, in_stor_hdr, in_vol)
+
+        out_vol,out_hdr,out_stor_hdr = Minc2.read_minc_volume_std(joinpath(tmp,"test1.mnc"), Float64)
+
+        @test in_hdr.dims == out_hdr.dims
+        @test in_hdr.start == out_hdr.start
+        @test in_hdr.step == out_hdr.step
+        @test in_hdr.dir_cos == out_hdr.dir_cos
+        @test in_vol ≈ out_vol atol=0.1
     end
 end
 # TODO: write volume
