@@ -21,6 +21,9 @@ module Minc2
     using CBinding
     using .minc2_simple
 
+    # only needed for world_to_voxel, matrix inversion
+    using LinearAlgebra
+
     """
     Axis typed from MINC volume, TODO: make this compatible with NIFTI ?
     """
@@ -48,9 +51,9 @@ module Minc2
     """
     Mapping MINC2 spatial dimensions to proper spatial dimension (should be identity for spatial dims)
     """
-    minc2_spatial=Dict(Cint(minc2_simple.MINC2_DIM_X)=>1,
-                       Cint(minc2_simple.MINC2_DIM_Y)=>2,
-                       Cint(minc2_simple.MINC2_DIM_Z)=>3)
+    minc2_spatial=Dict(DIM_X=>1,
+                       DIM_Y=>2,
+                       DIM_Z=>3)
 
     """
     map Julia types to minc2 data types
@@ -139,7 +142,7 @@ module Minc2
         dir_cos_valid::Vector{Bool}
         # TODO: figure out how to make it compatible with other libraries
         " Axis ID, see [DIM]"
-        axis::Vector{Int32}
+        axis::Vector{DIM}
 
         """
         Consrtuct header with given number of dimensions
@@ -150,7 +153,7 @@ module Minc2
                 ones(ndim), 
                 Matrix{Float64}(undef, ndim, 3),
                 zeros(Bool,ndim),
-                zeros(ndim))
+                fill(DIM_UNKNOWN,ndim))
         end
     end
 
@@ -174,7 +177,7 @@ module Minc2
         
         _dims = [
             c"minc2_simple.struct minc2_dimension"(
-                    id=hdr.axis[i],
+                    id=Int32(hdr.axis[i]),
                     length=j,
                     start=hdr.start[i],
                     step=hdr.step[i],
@@ -241,12 +244,12 @@ module Minc2
                 hdr.dir_cos_valid[i] = true
             else # TODO: do it only for spatial dimension
                 hdr.dir_cos[i,:] = zeros(3)
-                if haskey(minc2_spatial, dd[][i].id)  
-                    hdr.dir_cos[i,minc2_spatial[dd[][i].id]] = 1.0
+                if haskey(minc2_spatial, DIM(dd[][i].id) )
+                    hdr.dir_cos[i, minc2_spatial[DIM(dd[][i].id)] ] = 1.0
                 end
                 hdr.dir_cos_valid[i] = false
             end
-            hdr.axis[i] = dd[][i].id
+            hdr.axis[i] = DIM(dd[][i].id)
         end
         return hdr
     end
@@ -432,6 +435,33 @@ module Minc2
     end
 
     """
+    Convenience function for reading specific attribute, return default value if not found
+        also convert Array into the first value if it's a one-length array
+    """
+    function get_attribute(h::VolumeHandle,g::String,a::String;default=missing)
+        # ::Union{String,Missing,...}
+        r=default
+        if g in groups(h)
+            if a in attributes(h,g)
+                r=read_attribute(h,g,a)
+            end
+        end
+    
+        if !ismissing(r)
+            if typeof(r) <: Array{T, 1} where T<:Number
+                if length(r)==1
+                    r=r[1]
+                end
+            end
+            if typeof(r) <: String
+                r=rstrip(r,'\0') # HACK
+            end
+        end
+        return r
+    end
+    
+
+    """
     List groups defined in minc2 file
     """
     function groups(h::VolumeHandle)
@@ -510,6 +540,40 @@ module Minc2
         @minc2_check minc2_simple.minc2_world_to_voxel(h.x[],xyz,ijk)
         return ijk
     end
+
+    """
+    give 4x4 matrix for world to voxel transformation based on header
+    """
+    function voxel_to_world(hdr::MincHeader)
+        rot=zeros(3,3)
+        scales=zeros(3,3)
+
+        for i=1:3
+            if hdr.dir_cos_valid[i]
+                rot[i,1:3]=hdr.dir_cos[i,1:3]
+            else
+                rot[i,i]=1
+            end
+            scales[i,i]=hdr.step[i]
+        end
+        origin=transpose(hdr.start)*rot
+        
+        mat=zeros(4,4)
+        mat[4,4]     = 1
+        mat[1:3,1:3] = scales*rot
+        mat[1:3,4]   = origin
+
+        return mat
+    end
+
+    """
+    give 4x4 matrix for voxel to world transformation
+    """
+    function world_to_voxel(hdr::MincHeader)
+        mat=voxel_to_world(hdr)
+        return inv(mat)
+    end
+
 
     """
     convert contignuous 0-based voxel indexes (I,J,K) to world coordinates (X,Y,Z) 0-based
@@ -609,6 +673,9 @@ module Minc2
         return nothing
     end
 
+
+
+
     """
     Open transform xfm file, return handle
     """
@@ -653,7 +720,7 @@ module Minc2
     """
     Get number of transformations
     """
-    function get_n_concat(h::TransformHandle)
+    function get_n_concat(h::TransformHandle)::Int
         n = Ref{Int}(0)
         @minc2_check minc2_simple.minc2_xfm_get_n_concat( h.x[], n )
         return n[]
@@ -662,13 +729,13 @@ module Minc2
     """
     Get transform type 
     """
-    function get_n_type(h::TransformHandle;n::Int32=0)
+    function get_n_type(h::TransformHandle;n::Int=0)::XFM
         t = Ref{Int}(0)
-        @minc2_check minc2_simple.minc2_xfm_get_n_type( h.x[], t )
-        return t[]
+        @minc2_check minc2_simple.minc2_xfm_get_n_type( h.x[], n, t )
+        return XFM(t[])
     end
 
-    function get_grid_transform(h::TransformHandle;n::Int32=0)        
+    function get_grid_transform(h::TransformHandle;n::Int=0)        
         c_file=Ref{c"char *"}()
         inv=Ref{Int}(0)
 
@@ -676,13 +743,13 @@ module Minc2
         r=String(c_file)
         Libc.free(ptr)
 
-        return (r,r[]!=0)
+        return (r,inv[]!=0)
     end
 
-    function get_linear_transform(h::TransformHandle;n::Int32=0)
+    function get_linear_transform(h::TransformHandle;n::Int=0)
         mat=zeros(Float64,4,4)
-        @minc2_check minc2_simple.minc2_xfm_get_linear_transform(h.x[],n,mat)
-        return mat
+        @minc2_check minc2_simple.minc2_xfm_get_linear_transform(h.x[], n, Base.unsafe_convert(Ptr{Cdouble},mat))
+        return transpose(mat)
     end
 
     function get_linear_transform_param(h::TransformHandle;n::Int64=0,center::Union{Nothing,Vector{Float64}}=nothing)
