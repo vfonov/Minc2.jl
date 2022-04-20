@@ -235,11 +235,12 @@ function store_header(h::VolumeHandle)::MincHeader
     return _hdr_convert!(hdr,dd)
 end
 
+
 """
-Read the actual volume using handle
+Allocate empty volume using handle
 return volume, storage header
 """
-function read_minc_volume_raw(h::VolumeHandle, ::Type{T}=Float32 ) where {T}
+function empty_like_minc_volume_raw(h::VolumeHandle, ::Type{T}=Float32 ) where {T}
     # TODO: use ImageMetadata to store header contents?
     store_hdr = store_header( h )
     volume = Array{T}(undef, store_hdr.dims...)
@@ -248,21 +249,60 @@ function read_minc_volume_raw(h::VolumeHandle, ::Type{T}=Float32 ) where {T}
     return volume, store_hdr
 end
 
+
+"""
+Read the actual volume using handle
+return volume, storage header
+"""
+function read_minc_volume_raw(h::VolumeHandle, ::Type{T}=Float32 ) where {T}
+
+    volume,store_hdr = empty_like_minc_volume_raw(h,T)
+    @minc2_check minc2_simple.minc2_load_complete_volume(h.x[], Base.unsafe_convert(Ptr{Cvoid},volume), julia_to_minc2[Type{T}] )
+
+    return volume, store_hdr
+end
+
+
+"""
+Read the actual volume using handle
+return volume, representation header,storage header
+"""
+function empty_like_minc_volume_std(h::VolumeHandle, ::Type{T}=Float32 ) where {T}
+    # TODO: use ImageMetadata to store header contents?
+    setup_standard_order( h )
+    store_hdr = store_header( h )
+    hdr = representation_header( h )
+    volume = Array{T}(undef, hdr.dims...)
+
+    return volume, hdr, store_hdr
+end
+
+
 """
 Read the actual volume using handle
 return volume, representation header,storage header
 """
 function read_minc_volume_std(h::VolumeHandle, ::Type{T}=Float32 ) where {T}
     # TODO: use ImageMetadata to store header contents?
-    setup_standard_order( h )
-    store_hdr = store_header( h )
-    hdr = representation_header( h )
-
-    volume = Array{T}(undef, hdr.dims...)
+    volume, hdr, store_hdr = empty_like_minc_volume_std(h,T)
 
     @minc2_check minc2_simple.minc2_load_complete_volume(h.x[], Base.unsafe_convert(Ptr{Cvoid},volume), julia_to_minc2[Type{T}] )
     return volume, hdr, store_hdr
 end
+
+
+"""
+allocate empty volume using path
+return volume, representation header,storage header
+"""
+function empty_like_minc_volume_std(path::String, ::Type{T}=Float32 ) where {T}
+    handle = open_minc_file(path)
+    volume, hdr, store_hdr = empty_like_minc_volume_std(handle,T)
+    close_minc_file(handle)
+
+    return volume, hdr, store_hdr
+end
+
 
 """
 Read the actual volume using path
@@ -275,6 +315,20 @@ function read_minc_volume_std(path::String, ::Type{T}=Float32 ) where {T}
 
     return volume, hdr, store_hdr
 end
+
+
+"""
+Read the actual volume using path
+return volume, representation header,storage header
+"""
+function empty_like_minc_volume_raw(path::String, ::Type{T}=Float32 ) where {T}
+    handle = open_minc_file(path)
+    volume, store_hdr = empty_like_minc_volume_raw(handle,T)
+    close_minc_file(handle)
+
+    return volume, store_hdr
+end
+
 
 """
 Read the actual volume using path

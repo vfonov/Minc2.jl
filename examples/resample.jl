@@ -17,6 +17,15 @@ function parse_commandline()
             required = true
         "--like"
             help = "Reference "
+        "--order"
+            help = "Interpolation order [0-3]"
+            arg_type = Int
+            default = 2
+            range_tester = x->0<=x<4
+        "--fill"
+            help = "Fill value"
+            arg_type = Float64
+            default = 0.0
     end
     parse_args(ARGS, s)
 end
@@ -32,16 +41,30 @@ for i in 1:Minc2.get_n_concat(xfm)
     end
 end
 
-in_vol,in_hdr,in_store_hdr=Minc2.read_minc_volume_std(args["in"], Float64)
+in_vol,in_hdr,in_store_hdr = Minc2.read_minc_volume_std(args["in"], Float64)
 
 @info "in_vol:",size(in_vol)
 @info "in_hdr:",in_hdr
 
+if args["order"]==0     # nearest
+    in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Constant())),args["fill"])
+elseif args["order"]==1 # linear
+    in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Linear())),args["fill"])
+elseif args["order"]==2 # quadratic
+    in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Quadratic(Line(OnCell())))), args["fill"])
+elseif args["order"]==3 # cubic
+    in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Cubic(Line(OnCell())))), args["fill"])
+end
 
-in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Linear())),0.0)
 
-out_vol=zeros(size(in_vol))
-# simple case 
+if !isnothing(args["like"])
+    out_vol,out_hdr,out_store_hdr = Minc2.empty_like_minc_volume_std(args["like"],Float64)
+else
+    out_vol = Array{Float64}(undef, size(in_vol)...)
+    out_hdr = in_hdr
+    out_store_hdr = in_store_hdr
+end
+
 v2w=Minc2.voxel_to_world(in_hdr)
 w2v=Minc2.world_to_voxel(in_hdr)
 
@@ -58,11 +81,10 @@ itfm.mat=inv(tfm.mat)
 
 for c in CartesianIndices(out_vol)
 
-    dst = Minc2.transform_point(w2v, Minc2.transform_point(itfm, Minc2.transform_point(v2w, Float64[Tuple(c)...] .- 1.0 ))) .+ 1.0
+    dst = Minc2.transform_point(w2v, Minc2.transform_point(itfm, Minc2.transform_point(v2w, c ))) .+ 1.0
 
-    out_vol[c] = in_vol_itp( dst[1], dst[2], dst[3] )
+    out_vol[c] = in_vol_itp( dst... )
 end
 
-
-Minc2.write_minc_volume_std(args["out"], UInt16, in_store_hdr, out_vol)
+Minc2.write_minc_volume_std(args["out"], UInt16, out_store_hdr, out_vol)
 

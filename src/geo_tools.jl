@@ -36,6 +36,14 @@ function transform_point(tfm::AffineTransform,p::Vector{Float64})::Vector{Float6
 end
 
 """
+Apply affine transform to CartesianIndices
+"""
+function transform_point(tfm::AffineTransform,p::CartesianIndex{3})::Vector{Float64}
+    ( [p[1]-1.0,p[2]-1.0,p[3]-1.0]' * tfm.mat[1:3, 1:3])' + tfm.mat[1:3,4]
+end
+
+
+"""
 Apply grid transform
 """
 function transform_point(tfm::GridTransform, p::Vector{Float64})::Vector{Float64}
