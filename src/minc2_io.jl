@@ -5,13 +5,13 @@ using .minc2_simple
 Axis typed from MINC volume, TODO: make this compatible with NIFTI ?
 """
 @enum DIM begin
-DIM_UNKNOWN = Cint(minc2_simple.MINC2_DIM_UNKNOWN)
-DIM_X    = Cint(minc2_simple.MINC2_DIM_X )
-DIM_Y    = Cint(minc2_simple.MINC2_DIM_Y )
-DIM_Z    = Cint(minc2_simple.MINC2_DIM_Z )
-DIM_TIME = Cint(minc2_simple.MINC2_DIM_TIME )
-DIM_VEC  = Cint(minc2_simple.MINC2_DIM_VEC )
-DIM_END  = Cint(minc2_simple.MINC2_DIM_END )
+    DIM_UNKNOWN = Cint(minc2_simple.MINC2_DIM_UNKNOWN)
+    DIM_X    = Cint(minc2_simple.MINC2_DIM_X )
+    DIM_Y    = Cint(minc2_simple.MINC2_DIM_Y )
+    DIM_Z    = Cint(minc2_simple.MINC2_DIM_Z )
+    DIM_TIME = Cint(minc2_simple.MINC2_DIM_TIME )
+    DIM_VEC  = Cint(minc2_simple.MINC2_DIM_VEC )
+    DIM_END  = Cint(minc2_simple.MINC2_DIM_END )
 end
 
 
@@ -26,20 +26,20 @@ minc2_spatial=Dict(DIM_X=>1,
 map Julia types to minc2 data types
 """
 julia_to_minc2 = Dict(
-Type{Int8}     => Cint(minc2_simple.MINC2_BYTE ),
-Type{Int16}    => Cint(minc2_simple.MINC2_SHORT),
-Type{Int32}    => Cint(minc2_simple.MINC2_INT ),
-Type{Float32}  => Cint(minc2_simple.MINC2_FLOAT ),
-Type{Float64}  => Cint(minc2_simple.MINC2_DOUBLE ),
-Type{String}   => Cint(minc2_simple.MINC2_STRING ),
-Type{UInt8}    => Cint(minc2_simple.MINC2_UBYTE ),
-Type{UInt16}   => Cint(minc2_simple.MINC2_USHORT ),
-Type{UInt32}   => Cint(minc2_simple.MINC2_UINT ),
-Type{Complex{Int16}} => Cint(minc2_simple.MINC2_SCOMPLEX ),
-Type{Complex{Int32}} => Cint(minc2_simple.MINC2_ICOMPLEX ),
-Type{Complex{Float32}} => Cint(minc2_simple.MINC2_FCOMPLEX ),
-Type{Complex{Float64}} => Cint(minc2_simple.MINC2_DCOMPLEX ),
-Type{Any}      => Cint(minc2_simple.MINC2_UNKNOWN)
+    Type{Int8}     => Cint(minc2_simple.MINC2_BYTE ),
+    Type{Int16}    => Cint(minc2_simple.MINC2_SHORT),
+    Type{Int32}    => Cint(minc2_simple.MINC2_INT ),
+    Type{Float32}  => Cint(minc2_simple.MINC2_FLOAT ),
+    Type{Float64}  => Cint(minc2_simple.MINC2_DOUBLE ),
+    Type{String}   => Cint(minc2_simple.MINC2_STRING ),
+    Type{UInt8}    => Cint(minc2_simple.MINC2_UBYTE ),
+    Type{UInt16}   => Cint(minc2_simple.MINC2_USHORT ),
+    Type{UInt32}   => Cint(minc2_simple.MINC2_UINT ),
+    Type{Complex{Int16}} => Cint(minc2_simple.MINC2_SCOMPLEX ),
+    Type{Complex{Int32}} => Cint(minc2_simple.MINC2_ICOMPLEX ),
+    Type{Complex{Float32}} => Cint(minc2_simple.MINC2_FCOMPLEX ),
+    Type{Complex{Float64}} => Cint(minc2_simple.MINC2_DCOMPLEX ),
+    Type{Any}      => Cint(minc2_simple.MINC2_UNKNOWN)
 )
 
 const _minc2_dimension=c"minc2_simple.struct minc2_dimension"
@@ -54,29 +54,29 @@ minc2_to_julia=Dict([(j,i) for (i,j) in julia_to_minc2])
 minc2_simple API status
 """
 @enum STATUS begin
-# minc2 status
-SUCCESS  = Cint(minc2_simple.MINC2_SUCCESS)
-ERROR    = Cint(minc2_simple.MINC2_ERROR)
+    # minc2 status
+    SUCCESS  = Cint(minc2_simple.MINC2_SUCCESS)
+    ERROR    = Cint(minc2_simple.MINC2_ERROR)
 end
 
 """
 Maro to verify the return code
 """
 macro minc2_check( ex ) # STATUS::SUCCESS
-return :($(esc(ex)) == 0 ? $(nothing) : throw(SystemError("MINC2 error")))
+    return :($(esc(ex)) == 0 ? $(nothing) : throw(SystemError("MINC2 error")))
 end
 
 """
 minc2_simple volume handle
 """
 mutable struct VolumeHandle
-x::Ref
-function VolumeHandle()
-  ret = new( Ref(minc2_simple.minc2_allocate0()) )
+    x::Ref
+    function VolumeHandle()
+    ret = new( Ref(minc2_simple.minc2_allocate0()) )
 
-  finalizer(x -> c"minc2_simple.minc2_destroy"(x[]), ret.x)
-  return ret
-end
+    finalizer(x -> c"minc2_simple.minc2_destroy"(x[]), ret.x)
+    return ret
+    end
 end
 
 
@@ -497,36 +497,36 @@ function world_to_voxel(h::VolumeHandle, xyz::Vector{Float64})::Vector{Float64}
 end
 
 """
-give 4x4 matrix for world to voxel transformation based on header
+give AffineTransform for world to voxel transformation based on header
 """
-function voxel_to_world(hdr::MincHeader)
+function voxel_to_world(hdr::MincHeader)::AffineTransform
     rot=zeros(3,3)
     scales=zeros(3,3)
 
     for i=1:3
         if hdr.dir_cos_valid[i]
-            rot[i,1:3]=hdr.dir_cos[i,1:3]
+            rot[i,1:3] = hdr.dir_cos[i,1:3]
         else
-            rot[i,i]=1
+            rot[i,i] = 1
         end
         scales[i,i]=hdr.step[i]
     end
     origin=transpose(hdr.start)*rot
 
-    mat=zeros(4,4)
-    mat[4,4]     = 1
-    mat[1:3,1:3] = scales*rot
-    mat[1:3,4]   = origin
+    tfm=AffineTransform() 
+    tfm.mat[1:3,1:3] = scales*rot
+    tfm.mat[1:3,4]   = origin
 
-    return mat
+    return tfm
 end
 
 """
-give 4x4 matrix for voxel to world transformation
+give AffineTransform for voxel to world transformation
 """
-function world_to_voxel(hdr::MincHeader)
-    mat=voxel_to_world(hdr)
-    return inv(mat)
+function world_to_voxel(hdr::MincHeader)::AffineTransform
+    tfm=voxel_to_world(hdr)
+    tfm.mat=inv(tfm.mat)
+    return tfm
 end
 
 

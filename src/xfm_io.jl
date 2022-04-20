@@ -42,7 +42,7 @@ function save_xfm_file(h::TransformHandle , path::String)
 end
 
 """
-Transform point x,y,z
+Transform point x,y,z using libminc
 """
 function transform_point(h::TransformHandle, xyz::Vector{Float64})::Vector{Float64}
     xyz_out=zeros(Float64,3)
@@ -51,7 +51,7 @@ function transform_point(h::TransformHandle, xyz::Vector{Float64})::Vector{Float
 end
 
 """
-Transform point x,y,z
+Inverse transform point x,y,z  using libminc
 """
 function inverse_transform_point(h::TransformHandle, xyz::Vector{Float64})::Vector{Float64}
     xyz_out=zeros(Float64,3)
@@ -84,7 +84,7 @@ function get_n_type(h::TransformHandle;n::Int=0)::XFM
     return XFM(t[])
 end
 
-function get_grid_transform(h::TransformHandle;n::Int=0)        
+function get_grid_transform(h::TransformHandle;n::Int=0)
     c_file=Ref{c"char *"}()
     inv=Ref{Int}(0)
 
@@ -98,7 +98,7 @@ end
 function get_linear_transform(h::TransformHandle;n::Int=0)
     mat=zeros(Float64,4,4)
     @minc2_check minc2_simple.minc2_xfm_get_linear_transform(h.x[], n, Base.unsafe_convert(Ptr{Cdouble},mat))
-    return transpose(mat)
+    return mat
 end
 
 function get_linear_transform_param(h::TransformHandle;n::Int64=0,center::Union{Nothing,Vector{Float64}}=nothing)
@@ -116,15 +116,23 @@ function get_linear_transform_param(h::TransformHandle;n::Int64=0,center::Union{
     return (center=center,translations=translations,scales=scales,shears=shears,rotations=rotations)
 end
 
+"""
+Append affine transform
+"""
 function append_linear_transform(h::TransformHandle,lin::Matrix{Float64})
     @minc2_check minc2_simple.minc2_xfm_append_linear_transform(h.x[],lin)
 end
 
-# TODO: 
+"""
+Append grid transform 
+"""
 function append_grid_transform(h::TransformHandle,grid_file::String;inv::Bool=false)
     @minc2_check minc2_simple.append_grid_transform(h.x[],grid_file,inv)
 end
 
+"""
+
+"""
 function concat_xfm(h::TransformHandle,i::TransformHandle)
     @minc2_check minc2_simple.minc2_xfm_concat_xfm(h.x[], i.x[])
 end
