@@ -75,7 +75,7 @@ itfm=Minc2.inv(tfm)
 @info "w2v:",w2v
 @info "ixfm:",itfm
 
-for c in CartesianIndices(out_vol)
+Threads.@threads for c in CartesianIndices(out_vol)
     dst = Minc2.transform_point(w2v, Minc2.transform_point(itfm, Minc2.transform_point(v2w, c ))) .+ 1.0
     out_vol[c] = in_vol_itp( dst... )
 end

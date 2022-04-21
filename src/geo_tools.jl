@@ -41,7 +41,7 @@ AnyTransform=Union{AffineTransform,GridTransform}
 Invert transform
 """
 function inv(t::AffineTransform)::AffineTransform
-    AffineTransform(Base.cinv(t.mat))
+    AffineTransform(Base.inv(t.mat))
 end
 
 """
