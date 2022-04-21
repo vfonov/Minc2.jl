@@ -65,19 +65,28 @@ else
     out_store_hdr = in_store_hdr
 end
 
-v2w=Minc2.voxel_to_world(in_hdr)
+v2w=Minc2.voxel_to_world(out_hdr)
 w2v=Minc2.world_to_voxel(in_hdr)
 
-tfm=Minc2.get_linear_transform(xfm,n=0)
+#tfm=Minc2.get_linear_transform(xfm,n=0)
+#itfm=Minc2.inv(tfm)
+tfm=Minc2.get_transforms(xfm)
+@info "tfm:",tfm
 itfm=Minc2.inv(tfm)
 
-@info "v2w:",v2w
-@info "w2v:",w2v
+
+#@info itfm[1].itp_vector_field
+#@info "v2w:",v2w
+#@info "w2v:",w2v
 @info "ixfm:",itfm
 
 Threads.@threads for c in CartesianIndices(out_vol)
-    dst = Minc2.transform_point(w2v, Minc2.transform_point(itfm, Minc2.transform_point(v2w, c ))) .+ 1.0
-    out_vol[c] = in_vol_itp( dst... )
+    orig = Minc2.transform_point(v2w, c )
+    dst = Minc2.transform_point(itfm, orig)
+    dst_v = Minc2.transform_point(w2v, dst ) .+ 1.0
+    
+    out_vol[c] = in_vol_itp( dst_v... )
+    #out_vol[c] = sqrt(sum((orig - dst).^2))
 end
 
 Minc2.write_minc_volume_std(args["out"], UInt16, out_store_hdr, out_vol)

@@ -556,16 +556,18 @@ give AffineTransform for world to voxel transformation based on header
 function voxel_to_world(hdr::MincHeader)::AffineTransform
     rot=zeros(3,3)
     scales=zeros(3,3)
-
+    start=zeros(3)
     for i=1:3
-        if hdr.dir_cos_valid[i]
-            rot[i,1:3] = hdr.dir_cos[i,1:3]
+        aa=findfirst(isequal(DIM(i)), hdr.axis) # HACK, assumes DIM_X=1,DIM_Y=2 etc
+        if hdr.dir_cos_valid[aa]
+            rot[i,1:3] = hdr.dir_cos[aa,1:3]
         else
             rot[i,i] = 1
         end
-        scales[i,i]=hdr.step[i]
+        scales[i,i]=hdr.step[aa]
+        start[i]=hdr.start[aa]
     end
-    origin=transpose(hdr.start)*rot
+    origin=transpose(start) * rot
 
     tfm=AffineTransform() 
     tfm.mat[1:3,1:3] = scales*rot
