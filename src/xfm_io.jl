@@ -145,11 +145,15 @@ function get_transforms(h::TransformHandle)::Vector{AnyTransform}
         if t==MINC2_XFM_LINEAR
             push!(r,get_linear_transform(h,n=i-1))
         elseif t==MINC2_XFM_GRID_TRANSFORM
-            grid_fname,inv_grid=get_grid_transform(h,n=i-1)
-            @info "grid_fname:",grid_fname
-            grid_vol,grid_hdr,grid_store_hdr = Minc2.read_minc_volume_std(grid_fname, Float64)
-            
-            push!(r,GridTransform(voxel_to_world(grid_hdr),inv_grid,grid_vol))
+            grid_fname, inv_grid=get_grid_transform(h,n=i-1)
+
+            grid_vol, grid_hdr, grid_store_hdr = Minc2.read_minc_volume_std(grid_fname, Float64)
+
+            if inv_grid
+                push!(r,InverseGridTransform(voxel_to_world(grid_hdr),grid_vol))
+            else
+                push!(r,       GridTransform(voxel_to_world(grid_hdr),grid_vol))
+            end
         else
             # unsupported type 
             throw(SystemError("Unsupported transform type: $t"))

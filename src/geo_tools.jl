@@ -22,13 +22,11 @@ Dense vector field transform (grid transform)
 mutable struct GridTransform
     voxel_to_world::AffineTransform
     world_to_voxel::AffineTransform
-    inverse::Bool
     vector_field::Array{Float64, 4}
     itp_vector_field
     function GridTransform(voxel_to_world::AffineTransform,
-        inverse::Bool,
         vector_field::Array{Float64, 4})
-        new(voxel_to_world,inv(voxel_to_world),inverse,vector_field,
+        new(voxel_to_world,inv(voxel_to_world),vector_field,
             extrapolate(interpolate(vector_field, (NoInterp(),BSpline(Linear()),BSpline(Linear()),BSpline(Linear()))),Flat()))
     end
 end
@@ -36,15 +34,37 @@ end
 function GridTransform()
     GridTransform(
         AffineTransform(),
-        false,
         zeros(3,3,3,3)
     )
 end
 
 """
+Dense vector field transform (grid transform) used in inverse
+"""
+mutable struct InverseGridTransform
+    voxel_to_world::AffineTransform
+    world_to_voxel::AffineTransform
+    vector_field::Array{Float64, 4}
+    itp_vector_field
+    function InverseGridTransform(voxel_to_world::AffineTransform,
+        vector_field::Array{Float64, 4})
+        new(voxel_to_world,inv(voxel_to_world),vector_field,
+            extrapolate(interpolate(vector_field, (NoInterp(),BSpline(Linear()),BSpline(Linear()),BSpline(Linear()))),Flat()))
+    end
+end
+
+function InverseGridTransform()
+    InverseGridTransform(
+        AffineTransform(),
+        zeros(3,3,3,3)
+    )
+end
+
+
+"""
 AnyTransform
 """
-AnyTransform=Union{AffineTransform,GridTransform}
+AnyTransform=Union{AffineTransform,GridTransform,InverseGridTransform}
 
 
 """
@@ -57,9 +77,17 @@ end
 """
 Invert GridTransform transform
 """
-function inv(t::GridTransform)::GridTransform
-    GridTransform(t.voxel_to_world, !t.inverse, t.vector_field)
+function inv(t::GridTransform)::InverseGridTransform
+    InverseGridTransform(t.voxel_to_world, t.vector_field)
 end
+
+"""
+Invert GridTransform transform
+"""
+function inv(t::InverseGridTransform)::GridTransform
+    GridTransform(t.voxel_to_world, t.vector_field)
+end
+
 
 """
 Invert concatenated transform
@@ -75,22 +103,54 @@ function transform_point(tfm::AffineTransform,p::Vector{Float64})::Vector{Float6
     (p' * tfm.mat[1:3, 1:3])' + tfm.mat[1:3,4]
 end
 
+
+function interpolate_field(v2w::AffineTransform,
+        itp_vector_field,p::Vector{Float64})::Vector{Float64}
+    # convert to voxel coords, add 1 to get index
+    v = transform_point(v2w, p) .+ 1.0
+    [itp_vector_field(1,v...),
+     itp_vector_field(2,v...),
+     itp_vector_field(3,v...) ]
+end
+
 """
-Apply grid transform
-# TODO: handle inversion flag?
+Apply forward grid transform
 """
 function transform_point(tfm::GridTransform, p::Vector{Float64})::Vector{Float64}
+    return p+interpolate_field(tfm.world_to_voxel,tfm.itp_vector_field)
+end
+
+"""
+Apply inverse grid transform
+reimplements algorithm from MNI_formats/grid_transforms.c:grid_inverse_transform_point
+"""
+function transform_point(tfm::InverseGridTransform, p::Vector{Float64})::Vector{Float64}
     #(p' * tfm.mat[1:3, 1:3])' + tfm.mat[1:3,4]
     # convert to voxel coords, add 1 to get index
-    v = transform_point(tfm.world_to_voxel, p) .+ 1.0
-    # interpolate displacement vector
-    d=[tfm.itp_vector_field(1,v...),
-       tfm.itp_vector_field(2,v...),
-       tfm.itp_vector_field(3,v...) ]
-    # resulting deformation
-    
-    return p+d
+    ftol=1.0/80
+    max_iter=10
+
+    best = estimate = p-interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, p)
+    err = p-(estimate+interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, estimate))
+
+    smallest_err=sum(abs.(err))
+    i=1
+
+    while i<max_iter && smallest_err>ftol 
+        i+=1
+        estimate = estimate + 0.95 * err
+        err = p-(estimate+interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, estimate))
+        err_mag=sum(abs.(err))
+
+        if err_mag<smallest_err
+            best=estimate
+            err_mag<smallest_err
+        end
+    end
+
+    return best
 end
+
 
 
 """
@@ -114,3 +174,5 @@ end
 
 # helper 
 Base.show(io::IO, z::GridTransform) = print(io, "GridTransform:", size(z.vector_field))
+# helper 
+Base.show(io::IO, z::InverseGridTransform) = print(io, "InverseGridTransform:", size(z.vector_field))
