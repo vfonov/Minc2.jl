@@ -68,23 +68,16 @@ end
 v2w=Minc2.voxel_to_world(in_hdr)
 w2v=Minc2.world_to_voxel(in_hdr)
 
-tfm=Minc2.AffineTransform()
-tfm.mat=Minc2.get_linear_transform(xfm,n=0)
-
-itfm=Minc2.AffineTransform()
-itfm.mat=inv(tfm.mat)
+tfm=Minc2.get_linear_transform(xfm,n=0)
+itfm=Minc2.inv(tfm)
 
 @info "v2w:",v2w
 @info "w2v:",w2v
 @info "ixfm:",itfm
 
-
 for c in CartesianIndices(out_vol)
-
     dst = Minc2.transform_point(w2v, Minc2.transform_point(itfm, Minc2.transform_point(v2w, c ))) .+ 1.0
-
     out_vol[c] = in_vol_itp( dst... )
 end
 
 Minc2.write_minc_volume_std(args["out"], UInt16, out_store_hdr, out_vol)
-

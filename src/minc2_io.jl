@@ -578,9 +578,7 @@ end
 give AffineTransform for voxel to world transformation
 """
 function world_to_voxel(hdr::MincHeader)::AffineTransform
-    tfm=voxel_to_world(hdr)
-    tfm.mat=inv(tfm.mat)
-    return tfm
+    inv(voxel_to_world(hdr))
 end
 
 

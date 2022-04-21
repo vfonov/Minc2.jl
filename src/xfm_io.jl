@@ -24,7 +24,6 @@ mutable struct TransformHandle
 end
 
 
-
 """
 Open transform xfm file, return handle
 """
@@ -95,10 +94,10 @@ function get_grid_transform(h::TransformHandle;n::Int=0)
     return (r,inv[]!=0)
 end
 
-function get_linear_transform(h::TransformHandle;n::Int=0)
+function get_linear_transform(h::TransformHandle;n::Int=0)::AffineTransform
     mat=zeros(Float64,4,4)
     @minc2_check minc2_simple.minc2_xfm_get_linear_transform(h.x[], n, Base.unsafe_convert(Ptr{Cdouble},mat))
-    return mat
+    return AffineTransform(mat)
 end
 
 function get_linear_transform_param(h::TransformHandle;n::Int64=0,center::Union{Nothing,Vector{Float64}}=nothing)
@@ -119,14 +118,14 @@ end
 """
 Append affine transform
 """
-function append_linear_transform(h::TransformHandle,lin::Matrix{Float64})
-    @minc2_check minc2_simple.minc2_xfm_append_linear_transform(h.x[],lin)
+function append_linear_transform(h::TransformHandle,lin::AffineTransform)
+    @minc2_check minc2_simple.minc2_xfm_append_linear_transform(h.x[],lin.mat)
 end
 
 """
 Append grid transform 
 """
-function append_grid_transform(h::TransformHandle,grid_file::String;inv::Bool=false)
+function append_grid_transform(h::TransformHandle, grid_file::String;inv::Bool=false)
     @minc2_check minc2_simple.append_grid_transform(h.x[],grid_file,inv)
 end
 

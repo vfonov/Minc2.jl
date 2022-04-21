@@ -1,11 +1,14 @@
+using LinearAlgebra
+
 """
 Affine transform
 """
 mutable struct AffineTransform
     mat::Matrix{Float64}
-    function AffineTransform()
-        new([1.0 0.0 0.0 0.0;0.0 1.0 0.0 0.0;0.0 0.0 1.0 0.0;0.0 0.0 0.0 1.0])
-    end
+end
+
+function AffineTransform()
+    AffineTransform([1.0 0.0 0.0 0.0;0.0 1.0 0.0 0.0;0.0 0.0 1.0 0.0;0.0 0.0 0.0 1.0])
 end
 
 
@@ -17,9 +20,15 @@ mutable struct GridTransform
     voxel_to_world::AffineTransform
     inverse::Bool
     vector_field::Array{Float64, 4}
-    function GridTransform()
-        new(AffineTransform(),AffineTransform(),false,zeros(1,1,1,3))
-    end
+end
+
+function GridTransform()
+    GridTransform(
+        AffineTransform(),
+        AffineTransform(),
+        false,
+        zeros(1,1,1,3)
+    )
 end
 
 """
@@ -27,6 +36,13 @@ AnyTransform
 """
 AnyTransform=Union{AffineTransform,GridTransform}
 
+
+"""
+Invert transform
+"""
+function inv(t::AffineTransform)::AffineTransform
+    AffineTransform(Base.cinv(t.mat))
+end
 
 """
 Apply affine transform
