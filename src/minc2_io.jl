@@ -567,13 +567,9 @@ function voxel_to_world(hdr::MincHeader)::AffineTransform
         scales[i,i]=hdr.step[aa]
         start[i]=hdr.start[aa]
     end
-    origin=transpose(start) * rot
+    origin=transpose(transpose(start) * rot)
 
-    tfm=AffineTransform() 
-    tfm.mat[1:3,1:3] = scales*rot
-    tfm.mat[1:3,4]   = origin
-
-    return tfm
+    return AffineTransform(scales*rot, origin)
 end
 
 """

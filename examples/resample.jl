@@ -17,6 +17,14 @@ function parse_commandline()
             required = true
         "--like"
             help = "Reference "
+        "--ftol"
+            help = "Tolerance for inverse nonlinear transform"
+            default=1.0/80
+            arg_type=Float64
+        "--max_iter"
+            help = "Maximum number of iterations per voxel for inverse transform"
+            default=10
+            arg_type=Int
         "--order"
             help = "Interpolation order [0-3]"
             arg_type = Int
@@ -68,21 +76,14 @@ end
 v2w=Minc2.voxel_to_world(out_hdr)
 w2v=Minc2.world_to_voxel(in_hdr)
 
-#tfm=Minc2.get_linear_transform(xfm,n=0)
-#itfm=Minc2.inv(tfm)
 tfm=Minc2.get_transforms(xfm)
-@info "tfm:",tfm
 itfm=Minc2.inv(tfm)
 
-
-#@info itfm[1].itp_vector_field
-#@info "v2w:",v2w
-#@info "w2v:",w2v
-@info "ixfm:",itfm
+@info "tfm:",tfm , "ixfm:",itfm
 
 Threads.@threads for c in CartesianIndices(out_vol)
     orig = Minc2.transform_point(v2w, c )
-    dst = Minc2.transform_point(itfm, orig)
+    dst = Minc2.transform_point(itfm, orig;ftol=args["ftol"],max_iter=args["max_iter"])
     dst_v = Minc2.transform_point(w2v, dst ) .+ 1.0
     
     out_vol[c] = in_vol_itp( dst_v... )
