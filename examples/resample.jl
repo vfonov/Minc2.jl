@@ -54,16 +54,15 @@ in_vol,in_hdr,in_store_hdr = Minc2.read_minc_volume_std(args["in"], Float64)
 @info "in_vol:",size(in_vol)
 @info "in_hdr:",in_hdr
 
-if args["order"]==0     # nearest
+if args["order"] == 0     # nearest
     in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Constant())),args["fill"])
-elseif args["order"]==1 # linear
+elseif args["order"] == 1 # linear
     in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Linear())),args["fill"])
-elseif args["order"]==2 # quadratic
+elseif args["order"] == 2 # quadratic
     in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Quadratic(Line(OnCell())))), args["fill"])
-elseif args["order"]==3 # cubic
+elseif args["order"] == 3 # cubic
     in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Cubic(Line(OnCell())))), args["fill"])
 end
-
 
 if !isnothing(args["like"])
     out_vol,out_hdr,out_store_hdr = Minc2.empty_like_minc_volume_std(args["like"],Float64)
