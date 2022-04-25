@@ -60,10 +60,19 @@ minc2_simple API status
 end
 
 """
+MINC io exception
+"""
+struct Minc2Error <: Exception
+    message::String
+end
+
+Base.showerror(io::IO, e::Minc2Error) = print(io,"MINC2:", e.message)
+
+"""
 Maro to verify the return code
 """
 macro minc2_check( ex ) # STATUS::SUCCESS
-    return :($(esc(ex)) == 0 ? $(nothing) : throw(SystemError("MINC2 error")))
+    return :($(esc(ex)) == 0 ? $(nothing) : throw( Minc2Error("error")) )
 end
 
 """
