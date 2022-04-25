@@ -176,3 +176,11 @@ end
 Base.show(io::IO, z::GridTransform) = print(io, "GridTransform:", size(z.vector_field))
 # helper 
 Base.show(io::IO, z::InverseGridTransform) = print(io, "InverseGridTransform:", size(z.vector_field))
+
+
+# NOTES
+# TODO: implement method from 
+#  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2837727/ 
+# "A pseudoinverse deformation vector field generator and its applications"
+# or https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6097910/
+# "Iterative inversion of deformation vector fields with feedback control" 
