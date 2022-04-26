@@ -33,10 +33,11 @@ function open_xfm_file(fname::String)::TransformHandle
     return h
 end
 
+
 """
 Save information into file
 """
-function save_xfm_file(h::TransformHandle , path::String)
+function save_xfm_file(h::TransformHandle, path::String)
     @minc2_check  minc2_simple.minc2_xfm_save(h.x[],path)
 end
 
@@ -137,8 +138,10 @@ function concat_xfm(h::TransformHandle,i::TransformHandle)
     @minc2_check minc2_simple.minc2_xfm_concat_xfm(h.x[], i.x[])
 end
 
-
-function get_transforms(h::TransformHandle)::Vector{AnyTransform}
+"""
+High level interface to load complete transform into memory 
+"""
+function load_transforms(h::TransformHandle)::Vector{AnyTransform}
     r=Vector{AnyTransform}()
     for i in 1:get_n_concat(h)
         t=get_n_type(h,n=i-1)
@@ -156,8 +159,40 @@ function get_transforms(h::TransformHandle)::Vector{AnyTransform}
             end
         else
             # unsupported type 
-            throw(SystemError("Unsupported transform type: $t"))
+            throw( Minc2Error("Unsupported transform type: $t")) 
         end
     end
     return r
 end
+
+
+"""
+High level interface to load complete transform into memory 
+"""
+function load_transforms(fname::String)::Vector{AnyTransform}
+    h = Minc2.open_xfm_file(fname)
+    load_transforms(h)
+end
+
+function save_transforms(fname::String, xfm::Vector{AnyTransform};
+        grid_store::Type{T}=Float32 ) where {T}
+    h = TransformHandle()
+    grid_ctr=0# count grid files
+    for x in xfm
+        if x isa AffineTransform
+            append_linear_transform(h,x)
+        elseif x isa GridTransform
+            grid_file_name=replace(fname,r"","") * "_grid_$(grid_ctr).mnc"
+            #grid_file_base=basename(grid_file_name)
+            write_minc_volume_std(grid_file_name, grid_store, 
+                create_header_from_v2w(size(x.vector_field),x.v2w), x.vector_field)
+            
+            append_grid_transform(h,grid_file_name)
+        elseif x isa InverseGridTransform
+            append_grid_transform(h,grid_file_name;inv=true)
+        else
+            throw( Minc2Error("Unsupported transform: $x"))
+        end 
+    end
+    save_xfm_file(h,fname)
+end 

@@ -591,6 +591,52 @@ function world_to_voxel(hdr::MincHeader)::AffineTransform
     inv(voxel_to_world(hdr))
 end
 
+"""
+generate header from the voxel to world transform and volume size
+"""
+function create_header_from_v2w(
+        sz, t::AffineTransform;
+        vector_dim::Bool=false, 
+        time_step::Union{Float64,Nothing}=nothing,
+        time_start::Union{Float64,Nothing}=nothing)::MincHeader
+
+    time_dim = !isnothing(time_step) && !isnothing(time_start)
+
+    f = svd(t.rot)
+
+    # remove scaling
+    dir_cos = f.U * f.Vt
+
+    step  = diag(t.rot         * Base.inv(dir_cos))
+    start = transpose(t.shift) * Base.inv(dir_cos)
+
+    hdr = MincHeader(3 + vector_dim + time_dim )
+    # TODO: verify sz dimensionality
+    for i = 1:length(sz)
+        hdr.dims[i] = sz[i]
+
+        if vector_dim && i==1 # vector dimension
+            hdr.start[i] = 0
+            hdr.step[i] = 1.0
+            hdr.dir_cos_valid = false
+            hdr.dir_cos[i,:] = [0,0,0]
+            hdr.axis[i] = DIM_VEC
+        elseif time_dim && (i-vector_dim)==4 # time dimension
+            hdr.step[i] = time_step
+            hdr.start[i] = time_start
+            hdr.axis[i] = DIM_TIME
+        else # spatial dimension
+            hdr.start[i] = start[i-vector_dim]
+            hdr.step[i] = step[i-vector_dim]
+            hdr.dir_cos[i,:] .= dir_cos[i-vector_dim,:]
+            hdr.dir_cos_valid[i] = true
+            hdr.axis[i] = DIM(i-vector_dim)
+        end
+    end
+    return hdr
+end
+
+
 
 """
 convert contignuous 0-based voxel indexes (I,J,K) to world coordinates (X,Y,Z) 0-based
@@ -601,6 +647,7 @@ function voxel_to_world(h::VolumeHandle,ijk::Vector{Float64})::Vector{Float64}
     @minc2_check minc2_simple.minc2_voxel_to_world(h.x[],ijk,xyz)
     return ijk
 end
+
 
 """
 write full volume to file, need to provide details of file structure

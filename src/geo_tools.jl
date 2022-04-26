@@ -8,24 +8,17 @@ using Interpolations
 Affine transform
 """
 mutable struct AffineTransform
-    #mat::Matrix{Float64}
     rot::Matrix{Float64}
     shift::Vector{Float64}
 end
 
 function AffineTransform()
-    #AffineTransform([1.0 0.0 0.0 0.0;0.0 1.0 0.0 0.0;0.0 0.0 1.0 0.0;0.0 0.0 0.0 1.0])
     AffineTransform([1.0 0.0 0.0 ;0.0 1.0 0.0 ;0.0 0.0 1.0 ],[0.0,0.0,0.0])
 end
 
 function AffineTransform(mat::Matrix{Float64})
-    #AffineTransform([1.0 0.0 0.0 0.0;0.0 1.0 0.0 0.0;0.0 0.0 1.0 0.0;0.0 0.0 0.0 1.0])
     AffineTransform(mat[1:3,1:3],mat[1:3,4])
 end
-
-# function AffineTransform(rot::Matrix{Float64},shift::Vector{Float64})
-#     AffineTransform(rot,shift)
-# end
 
 
 """
@@ -40,7 +33,8 @@ mutable struct GridTransform
     function GridTransform(voxel_to_world::AffineTransform,
         vector_field::Array{Float64, 4})
         new(voxel_to_world,inv(voxel_to_world),vector_field,
-            extrapolate(interpolate(vector_field, (NoInterp(),BSpline(Linear()),BSpline(Linear()),BSpline(Linear()))),Flat()))
+            extrapolate(interpolate(vector_field, 
+                (NoInterp(),BSpline(Linear()),BSpline(Linear()),BSpline(Linear()))),Flat()))
     end
 end
 
@@ -62,7 +56,8 @@ mutable struct InverseGridTransform
     function InverseGridTransform(voxel_to_world::AffineTransform,
         vector_field::Array{Float64, 4})
         new(voxel_to_world,inv(voxel_to_world),vector_field,
-            extrapolate(interpolate(vector_field, (NoInterp(),BSpline(Linear()),BSpline(Linear()),BSpline(Linear()))),Flat()))
+            extrapolate(interpolate(vector_field, 
+                (NoInterp(),BSpline(Linear()),BSpline(Linear()),BSpline(Linear()))),Flat()))
     end
 end
 
@@ -113,7 +108,6 @@ end
 Apply affine transform
 """
 function transform_point(tfm::AffineTransform, p::Vector{Float64};max_iter::Int=10,ftol::Float64=1e-3)::Vector{Float64}
-    #(p' * tfm.mat[1:3, 1:3])' + tfm.mat[1:3,4]
     (p' * tfm.rot)' + tfm.shift
 end
 
@@ -130,18 +124,18 @@ end
 """
 Apply forward grid transform
 """
-function transform_point(tfm::GridTransform, p::Vector{Float64};max_iter::Int=10,ftol::Float64=1e-3)::Vector{Float64}
-    return p+interpolate_field(tfm.world_to_voxel,tfm.itp_vector_field)
+function transform_point(tfm::GridTransform, p::Vector{Float64};
+        max_iter::Int=10,ftol::Float64=1e-3)::Vector{Float64}
+    return p + interpolate_field(tfm.world_to_voxel,tfm.itp_vector_field)
 end
 
 """
 Apply inverse grid transform
 reimplements algorithm from MNI_formats/grid_transforms.c:grid_inverse_transform_point
 """
-function transform_point(tfm::InverseGridTransform, p::Vector{Float64};max_iter::Int=10,ftol::Float64=1.0/80)::Vector{Float64}
-    #(p' * tfm.mat[1:3, 1:3])' + tfm.mat[1:3,4]
-    # convert to voxel coords, add 1 to get index
-
+function transform_point(tfm::InverseGridTransform, p::Vector{Float64};
+        max_iter::Int=10,ftol::Float64=1.0/80)::Vector{Float64}
+    
     best = estimate = p-interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, p)
     err = p-(estimate+interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, estimate))
 
@@ -164,7 +158,6 @@ function transform_point(tfm::InverseGridTransform, p::Vector{Float64};max_iter:
 end
 
 
-
 """
 Apply concatenated transform
 """
@@ -180,8 +173,7 @@ end
 Apply affine transform to CartesianIndices
 """
 function transform_point(tfm::AffineTransform,p::CartesianIndex{3};max_iter::Int=10,ftol::Float64=1.0/80)::Vector{Float64}
-    #( [p[1]-1.0,p[2]-1.0,p[3]-1.0]' * tfm.mat[1:3, 1:3])' + tfm.mat[1:3,4]
-    ( [p[1]-1.0,p[2]-1.0,p[3]-1.0]' * tfm.rot)' + tfm.shift
+    ( [p[1]-1.0, p[2]-1.0, p[3]-1.0]' * tfm.rot)' + tfm.shift
 end
 
 

@@ -75,7 +75,7 @@ end
 v2w=Minc2.voxel_to_world(out_hdr)
 w2v=Minc2.world_to_voxel(in_hdr)
 
-tfm=Minc2.get_transforms(xfm)
+tfm=Minc2.load_transforms(xfm)
 itfm=Minc2.inv(tfm)
 
 @info "tfm:",tfm , "ixfm:",itfm

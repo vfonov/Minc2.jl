@@ -1,5 +1,6 @@
 using Test, Minc2
 using StatsBase
+using LinearAlgebra
 #using Random
 
 @testset "Reading 3D volumes" begin
@@ -165,8 +166,19 @@ end
         @test in_vol ≈ out_vol atol=0.1
     end
 end
-# TODO: write volume
 
-# TODO: test 4D and 5D volume
+
+@testset "Re-generate header" begin
+    in_vol,in_hdr,in_stor_hdr=Minc2.read_minc_volume_std("input/t1_z+_double_cor.mnc", Float64)
+
+    v2w=Minc2.voxel_to_world(in_hdr)
+    new_hdr=Minc2.create_header_from_v2w(size(in_vol),v2w)
+
+    @test in_hdr.start ≈ new_hdr.start atol=1e-4 
+    @test in_hdr.step ≈ new_hdr.step atol=1e-6 
+    @test in_hdr.dir_cos ≈ new_hdr.dir_cos atol=1e-6 
+    @test in_hdr.dims == new_hdr.dims
+
+end
 
 # TODO: check xfm files
