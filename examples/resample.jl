@@ -40,14 +40,16 @@ end
 
 args = parse_commandline()
 
-xfm = Minc2.open_xfm_file(args["transform"])
+# xfm = Minc2.open_xfm_file(args["transform"])
 
-for i in 1:Minc2.get_n_concat(xfm)
-    @info "Transform:$(i) type:$(Minc2.get_n_type(xfm;n=i-1))"
-    if Minc2.get_n_type(xfm;n=i-1)==Minc2.MINC2_XFM_LINEAR
-        @info "matrix:",Minc2.get_linear_transform(xfm,n=i-1)
-    end
-end
+# for i in 1:Minc2.get_n_concat(xfm)
+#     @info "Transform:$(i) type:$(Minc2.get_n_type(xfm;n=i-1))"
+#     if Minc2.get_n_type(xfm;n=i-1)==Minc2.MINC2_XFM_LINEAR
+#         @info "matrix:",Minc2.get_linear_transform(xfm,n=i-1)
+#     end
+# end
+
+
 
 in_vol,in_hdr,in_store_hdr = Minc2.read_minc_volume_std(args["in"], Float64)
 
@@ -75,15 +77,15 @@ end
 v2w=Minc2.voxel_to_world(out_hdr)
 w2v=Minc2.world_to_voxel(in_hdr)
 
-tfm=Minc2.load_transforms(xfm)
+tfm=Minc2.load_transforms(args["transform"])
 itfm=Minc2.inv(tfm)
 
 @info "tfm:",tfm , "ixfm:",itfm
 
 Threads.@threads for c in CartesianIndices(out_vol)
     orig = Minc2.transform_point(v2w, c )
-    dst = Minc2.transform_point(itfm, orig;ftol=args["ftol"],max_iter=args["max_iter"])
-    dst_v = Minc2.transform_point(w2v, dst ) .+ 1.0
+    dst  = Minc2.transform_point(itfm, orig; ftol=args["ftol"], max_iter=args["max_iter"] )
+    dst_v= Minc2.transform_point(w2v, dst ) .+ 1.0
     
     out_vol[c] = in_vol_itp( dst_v... )
     #out_vol[c] = sqrt(sum((orig - dst).^2))
