@@ -155,8 +155,11 @@ function define_minc_file(hdr::MincHeader,::Type{Store}=Float32,::Type{Repr}=Sto
 
     # TODO: fix this
     _global_scaling = 0
-    _slice_scaling  = 0 
-    if _store_type != _representation_type && !(Store==Float32 && Repr==Float64 || Store==Float64 && Repr==Float32)
+    _slice_scaling  = 0
+    if _store_type != _representation_type && # HACK
+            !(Store==Float32 && Repr==Float64 || Store==Float64 && Repr==Float32) &&
+            !(Store==UInt8 && Repr==Int8 || Store==Int8 && Repr==UInt8) &&
+            !(Store==UInt16 && Repr==Int16 || Store==Int16 && Repr==UInt16) 
         _global_scaling = 1 # slice scaling is not completely supported yet in minc2-simple
         #_slice_scaling = 1
     end
