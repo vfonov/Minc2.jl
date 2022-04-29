@@ -8,10 +8,10 @@ function resample_volume(in_vol, out_vol, v2w, w2v, itfm;
     ftol=1.0/80,
     max_iter=10)
 
-    in_vol_itp = extrapolate( interpolate( in_vol, interp),fill)
+    in_vol_itp = extrapolate( interpolate( in_vol, interp), fill)
 
     # Threads.@threads
-    for c in CartesianIndices(out_vol)
+    @inbounds for c in CartesianIndices(out_vol)
         orig = Minc2.transform_point(v2w, c )
         dst  = Minc2.transform_point(itfm, orig; ftol=ftol, max_iter=max_iter )
         dst_v= Minc2.transform_point(w2v, dst ) .+ 1.0
@@ -82,7 +82,7 @@ w2v=Minc2.world_to_voxel(in_hdr)
 tfm=Minc2.load_transforms(args["transform"])
 itfm=Minc2.inv(tfm)
 
-@info "tfm:",tfm , "ixfm:",itfm
+#@info "tfm:",tfm , "ixfm:",itfm
 
 
 if args["order"] == 0     # nearest

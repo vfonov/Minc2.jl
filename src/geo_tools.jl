@@ -79,7 +79,7 @@ AnyTransform=Union{AffineTransform,GridTransform,InverseGridTransform}
 Invert AffineTransform transform
 """
 function inv(t::AffineTransform)::AffineTransform
-    AffineTransform(Base.inv( [t.rot t.shift;0 0 0 1] ))
+    AffineTransform(Base.inv( [t.rot t.shift; 0 0 0 1] ))
 end
 
 """
@@ -107,12 +107,12 @@ end
 """
 Apply affine transform
 """
-function transform_point(tfm::AffineTransform, p::Vector{Float64};max_iter::Int=10,ftol::Float64=1e-3)::Vector{Float64}
+@inline function transform_point(tfm::AffineTransform, p::Vector{Float64};max_iter::Int=10,ftol::Float64=1e-3)::Vector{Float64}
     (p' * tfm.rot)' + tfm.shift
 end
 
 
-function interpolate_field(v2w::AffineTransform,
+@inline function interpolate_field(v2w::AffineTransform,
         itp_vector_field,p::Vector{Float64})::Vector{Float64}
     # convert to voxel coords, add 1 to get index
     v = transform_point(v2w, p) .+ 1.0
@@ -124,9 +124,9 @@ end
 """
 Apply forward grid transform
 """
-function transform_point(tfm::GridTransform, p::Vector{Float64};
+@inline function transform_point(tfm::GridTransform, p::Vector{Float64};
         max_iter::Int=10,ftol::Float64=1e-3)::Vector{Float64}
-    return p + interpolate_field(tfm.world_to_voxel,tfm.itp_vector_field)
+    return p + interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, p)
 end
 
 """
@@ -172,8 +172,8 @@ end
 """
 Apply affine transform to CartesianIndices
 """
-function transform_point(tfm::AffineTransform,p::CartesianIndex{3};max_iter::Int=10,ftol::Float64=1.0/80)::Vector{Float64}
-    ( [p[1]-1.0, p[2]-1.0, p[3]-1.0]' * tfm.rot)' + tfm.shift
+@inline function transform_point(tfm::AffineTransform,p::CartesianIndex{3};max_iter::Int=10,ftol::Float64=1.0/80)::Vector{Float64}
+    @inbounds ( [p[1]-1.0, p[2]-1.0, p[3]-1.0]' * tfm.rot)' + tfm.shift
 end
 
 
