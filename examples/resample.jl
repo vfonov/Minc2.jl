@@ -1,12 +1,17 @@
 using Minc2 # for reading MINC2 files
 using Interpolations
 using ArgParse
+using StaticArrays
+using Profile
+using StatProfilerHTML
 
-function resample_volume(in_vol, out_vol, v2w, w2v, itfm;
-            interp=BSpline(Quadratic(Line(OnCell()))),
+function resample_volume(in_vol::Array{Float64,3}, out_vol::Array{Float64,3}, 
+            v2w::Minc2.AffineTransform, w2v::Minc2.AffineTransform, 
+            itfm::Vector{Minc2.AnyTransform};
+            interp::I=BSpline(Quadratic(Line(OnCell()))),
             fill=0.0,
             ftol=1.0/80,
-            max_iter=10)
+            max_iter=10) where {I}
 
     in_vol_itp = extrapolate( interpolate( in_vol, interp),fill)
 
@@ -14,7 +19,7 @@ function resample_volume(in_vol, out_vol, v2w, w2v, itfm;
     for c in CartesianIndices(out_vol)
         orig = Minc2.transform_point(v2w, c )
         dst  = Minc2.transform_point(itfm, orig; ftol=ftol, max_iter=max_iter )
-        dst_v= Minc2.transform_point(w2v, dst ) .+ 1.0
+        dst_v= Minc2.transform_point(w2v, dst ) + SA_F64[1.0,1.0,1.0]
         
         out_vol[c] = in_vol_itp( dst_v... )
         #out_vol[c] = sqrt(sum((orig - dst).^2))
@@ -87,14 +92,16 @@ itfm=Minc2.inv(tfm)
 
 if args["order"] == 0     # nearest
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Constant())),args["fill"])
-    resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Constant()),fill=args["fill"])
+    resample_volume(in_vol, out_vol,v2w,w2v,itfm; interp=BSpline(Constant()),fill=args["fill"])
 elseif args["order"] == 1 # linear
-    resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Linear()),fill=args["fill"])
+    @profilehtml resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Linear()),fill=args["fill"])
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Linear())),args["fill"])
+    Profile.print()
 elseif args["order"] == 2 # quadratic
-    @timev resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Quadratic(Line(OnCell()))),fill=args["fill"])
+    @profilehtml resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Quadratic(Line(OnCell()))),fill=args["fill"])
     #statprofilehtml()
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Quadratic(Line(OnCell())))), args["fill"])
+    Profile.print()
 elseif args["order"] == 3 # cubic
     resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Cubic(Line(OnCell()))),fill=args["fill"])
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Cubic(Line(OnCell())))), args["fill"])
