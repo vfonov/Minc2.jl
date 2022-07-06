@@ -107,7 +107,10 @@ end
 """
 Apply affine transform
 """
-function transform_point(tfm::AffineTransform, p::Vector{Float64};max_iter::Int=10,ftol::Float64=1e-3)::Vector{Float64}
+function transform_point(tfm::AffineTransform, 
+        p::Vector{Float64}; 
+        max_iter::Int=10,ftol::Float64=1e-3)::Vector{Float64}
+    
     (p' * tfm.rot)' + tfm.shift
 end
 

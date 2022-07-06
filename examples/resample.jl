@@ -3,10 +3,10 @@ using Interpolations
 using ArgParse
 
 function resample_volume(in_vol, out_vol, v2w, w2v, itfm;
-    interp=BSpline(Quadratic(Line(OnCell()))),
-    fill=0.0,
-    ftol=1.0/80,
-    max_iter=10)
+            interp=BSpline(Quadratic(Line(OnCell()))),
+            fill=0.0,
+            ftol=1.0/80,
+            max_iter=10)
 
     in_vol_itp = extrapolate( interpolate( in_vol, interp),fill)
 
@@ -87,16 +87,16 @@ itfm=Minc2.inv(tfm)
 
 if args["order"] == 0     # nearest
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Constant())),args["fill"])
-    resample_volume(in_vol,out_vol,v2w,w2v,itfm;interp=BSpline(Constant()),fill=args["fill"])
+    resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Constant()),fill=args["fill"])
 elseif args["order"] == 1 # linear
     resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Linear()),fill=args["fill"])
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Linear())),args["fill"])
 elseif args["order"] == 2 # quadratic
-    resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Quadratic(Line(OnCell()))),fill=args["fill"])
+    @timev resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Quadratic(Line(OnCell()))),fill=args["fill"])
     #statprofilehtml()
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Quadratic(Line(OnCell())))), args["fill"])
 elseif args["order"] == 3 # cubic
-    resample_volume(in_vol,out_vol,v2w,w2v,itfm;interp=BSpline(Cubic(Line(OnCell()))),fill=args["fill"])
+    resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Cubic(Line(OnCell()))),fill=args["fill"])
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Cubic(Line(OnCell())))), args["fill"])
 end
 
