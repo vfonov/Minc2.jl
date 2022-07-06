@@ -11,7 +11,7 @@ using StaticArrays
 Affine transform
 """
 struct AffineTransform
-    rot::SMatrix{3,3,Float64}
+    rot::SMatrix{3,3,Float64,9}
     shift::SVector{3,Float64}
 end
 
