@@ -89,7 +89,7 @@ if args["order"] == 0     # nearest
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Constant())),args["fill"])
     resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Constant()),fill=args["fill"])
 elseif args["order"] == 1 # linear
-    resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Linear()),fill=args["fill"])
+    @timev resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Linear()),fill=args["fill"])
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Linear())),args["fill"])
 elseif args["order"] == 2 # quadratic
     @timev resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Quadratic(Line(OnCell()))),fill=args["fill"])
