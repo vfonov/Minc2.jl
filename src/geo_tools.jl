@@ -185,7 +185,8 @@ end
 """
 Apply concatenated transform
 """
-@inline function transform_point(tfm::Vector{AnyTransform}, p::SVector{3,Float64};
+@inline function transform_point(tfm::Vector{AnyTransform}, 
+        p::SVector{3,Float64};
         max_iter::Int=10,ftol::Float64=1.0/80)::SVector{3,Float64}
     for t in tfm
         p::SVector{3,Float64} = transform_point(t,p;max_iter,ftol)
