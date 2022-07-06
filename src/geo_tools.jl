@@ -7,7 +7,7 @@ using Interpolations
 """
 Affine transform
 """
-mutable struct AffineTransform
+struct AffineTransform
     rot::Matrix{Float64}
     shift::Vector{Float64}
 end
@@ -24,7 +24,7 @@ end
 """
 Dense vector field transform (grid transform)
 """
-mutable struct GridTransform
+struct GridTransform
     voxel_to_world::AffineTransform
     world_to_voxel::AffineTransform
     vector_field::Array{Float64, 4}
@@ -48,7 +48,7 @@ end
 """
 Dense vector field transform (grid transform) used in inverse
 """
-mutable struct InverseGridTransform
+struct InverseGridTransform
     voxel_to_world::AffineTransform
     world_to_voxel::AffineTransform
     vector_field::Array{Float64, 4}
@@ -79,7 +79,7 @@ AnyTransform=Union{AffineTransform,GridTransform,InverseGridTransform}
 Invert AffineTransform transform
 """
 function inv(t::AffineTransform)::AffineTransform
-    AffineTransform(Base.inv( [t.rot t.shift; 0 0 0 1] ))
+    AffineTransform(Base.inv( [t.rot t.shift;0 0 0 1] ))
 end
 
 """
@@ -107,12 +107,12 @@ end
 """
 Apply affine transform
 """
-@inline function transform_point(tfm::AffineTransform, p::Vector{Float64};max_iter::Int=10,ftol::Float64=1e-3)::Vector{Float64}
+function transform_point(tfm::AffineTransform, p::Vector{Float64};max_iter::Int=10,ftol::Float64=1e-3)::Vector{Float64}
     (p' * tfm.rot)' + tfm.shift
 end
 
 
-@inline function interpolate_field(v2w::AffineTransform,
+function interpolate_field(v2w::AffineTransform,
         itp_vector_field,p::Vector{Float64})::Vector{Float64}
     # convert to voxel coords, add 1 to get index
     v = transform_point(v2w, p) .+ 1.0
@@ -124,9 +124,9 @@ end
 """
 Apply forward grid transform
 """
-@inline function transform_point(tfm::GridTransform, p::Vector{Float64};
+function transform_point(tfm::GridTransform, p::Vector{Float64};
         max_iter::Int=10,ftol::Float64=1e-3)::Vector{Float64}
-    return p + interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, p)
+    return p + interpolate_field(tfm.world_to_voxel,tfm.itp_vector_field)
 end
 
 """
@@ -172,8 +172,8 @@ end
 """
 Apply affine transform to CartesianIndices
 """
-@inline function transform_point(tfm::AffineTransform,p::CartesianIndex{3};max_iter::Int=10,ftol::Float64=1.0/80)::Vector{Float64}
-    @inbounds ( [p[1]-1.0, p[2]-1.0, p[3]-1.0]' * tfm.rot)' + tfm.shift
+function transform_point(tfm::AffineTransform,p::CartesianIndex{3};max_iter::Int=10,ftol::Float64=1.0/80)::Vector{Float64}
+    ( [p[1]-1.0, p[2]-1.0, p[3]-1.0]' * tfm.rot)' + tfm.shift
 end
 
 

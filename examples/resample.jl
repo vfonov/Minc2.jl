@@ -8,10 +8,10 @@ function resample_volume(in_vol, out_vol, v2w, w2v, itfm;
     ftol=1.0/80,
     max_iter=10)
 
-    in_vol_itp = extrapolate( interpolate( in_vol, interp), fill)
+    in_vol_itp = extrapolate( interpolate( in_vol, interp),fill)
 
     # Threads.@threads
-    @inbounds for c in CartesianIndices(out_vol)
+    for c in CartesianIndices(out_vol)
         orig = Minc2.transform_point(v2w, c )
         dst  = Minc2.transform_point(itfm, orig; ftol=ftol, max_iter=max_iter )
         dst_v= Minc2.transform_point(w2v, dst ) .+ 1.0
@@ -65,8 +65,8 @@ args = parse_commandline()
 
 in_vol,in_hdr,in_store_hdr = Minc2.read_minc_volume_std(args["in"], Float64)
 
-@info "in_vol:",size(in_vol)
-@info "in_hdr:",in_hdr
+#@info "in_vol:",size(in_vol)
+#@info "in_hdr:",in_hdr
 
 if !isnothing(args["like"])
     out_vol,out_hdr,out_store_hdr = Minc2.empty_like_minc_volume_std(args["like"],Float64)
@@ -89,11 +89,10 @@ if args["order"] == 0     # nearest
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Constant())),args["fill"])
     resample_volume(in_vol,out_vol,v2w,w2v,itfm;interp=BSpline(Constant()),fill=args["fill"])
 elseif args["order"] == 1 # linear
-    resample_volume(in_vol,out_vol,v2w,w2v,itfm;interp=BSpline(Linear()),fill=args["fill"])
+    resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Linear()),fill=args["fill"])
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Linear())),args["fill"])
 elseif args["order"] == 2 # quadratic
-    
-    @timev resample_volume(in_vol,out_vol,v2w,w2v,itfm;interp=BSpline(Quadratic(Line(OnCell()))),fill=args["fill"])
+    resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Quadratic(Line(OnCell()))),fill=args["fill"])
     #statprofilehtml()
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Quadratic(Line(OnCell())))), args["fill"])
 elseif args["order"] == 3 # cubic
