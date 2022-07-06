@@ -99,7 +99,7 @@ end
 function get_linear_transform(h::TransformHandle;n::Int64=0)::AffineTransform
     mat=zeros(Float64,4,4)
     @minc2_check minc2_simple.minc2_xfm_get_linear_transform(h.x[], n, Base.unsafe_convert(Ptr{Cdouble},mat))
-    return AffineTransform(mat)
+    return AffineTransform{Float64}(mat)
 end
 
 function get_linear_transform_param(h::TransformHandle;n::Int64=0,center::Union{Nothing,Vector{Float64}}=nothing)
@@ -141,8 +141,8 @@ end
 """
 High level interface to load complete transform into memory 
 """
-function load_transforms(h::TransformHandle)::Vector{AnyTransform}
-    r=Vector{AnyTransform}()
+function load_transforms(h::TransformHandle)::Vector{AnyTransform{Float64,Float64}}
+    r=Vector{AnyTransform{Float64,Float64}}()
     for i in 1:get_n_concat(h)
         t=get_n_type(h,n=i-1)
         if t==MINC2_XFM_LINEAR
@@ -153,9 +153,9 @@ function load_transforms(h::TransformHandle)::Vector{AnyTransform}
             grid_vol, grid_hdr, grid_store_hdr = Minc2.read_minc_volume_std(grid_fname, Float64)
 
             if inv_grid
-                push!(r,InverseGridTransform(voxel_to_world(grid_hdr),grid_vol))
+                push!(r,InverseGridTransform{Float64,Float64}(voxel_to_world(grid_hdr),grid_vol))
             else
-                push!(r,       GridTransform(voxel_to_world(grid_hdr),grid_vol))
+                push!(r,       GridTransform{Float64,Float64}(voxel_to_world(grid_hdr),grid_vol))
             end
         else
             # unsupported type 
@@ -169,7 +169,7 @@ end
 """
 High level interface to load complete transform into memory 
 """
-function load_transforms(fname::String)::Vector{AnyTransform}
+function load_transforms(fname::String)::Vector{AnyTransform{Float64,Float64}} 
     h = Minc2.open_xfm_file(fname)
     load_transforms(h)
 end

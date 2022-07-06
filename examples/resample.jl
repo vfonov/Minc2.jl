@@ -2,12 +2,12 @@ using Minc2 # for reading MINC2 files
 using Interpolations
 using ArgParse
 using StaticArrays
-using Profile
-using StatProfilerHTML
 
-function resample_volume(in_vol::Array{Float64,3}, out_vol::Array{Float64,3}, 
-            v2w::Minc2.AffineTransform, w2v::Minc2.AffineTransform, 
-            itfm::Vector{Minc2.AnyTransform};
+function resample_volume(in_vol::Array{Float64,3}, 
+            out_vol::Array{Float64,3}, 
+            v2w::Minc2.AffineTransform{Float64}, 
+            w2v::Minc2.AffineTransform{Float64}, 
+            itfm::Vector{Minc2.AnyTransform{Float64,Float64}};
             interp::I=BSpline(Quadratic(Line(OnCell()))),
             fill=0.0,
             ftol=1.0/80,

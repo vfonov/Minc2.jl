@@ -581,7 +581,7 @@ function voxel_to_world(hdr::MincHeader)::AffineTransform
     end
     origin=transpose(transpose(start) * rot)
 
-    return AffineTransform(scales*rot, origin)
+    return AffineTransform{Float64}(scales*rot, origin)
 end
 
 """
