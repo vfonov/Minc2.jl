@@ -126,17 +126,17 @@ end
 Apply affine transform
 """
 @inline function transform_point(tfm::AffineTransform{T}, 
-        p::SVector{3,T}; 
-        _whatever...)::SVector{3,T} where {T,F}
+        p::SVector{3,T};
+        _whatever...)::SVector{3,T} where {T}
     
     (p' * tfm.rot)' + tfm.shift
 end
 
 
 @inline function interpolate_field(v2w::AffineTransform{T},
-        itp_vector_field, p::SVector{3,T})::SVector{3,T} where {T,F}
+        itp_vector_field, p::SVector{3,T})::SVector{3,T} where {T}
     # convert to voxel coords, add 1 to get index
-    v = transform_point{T}(v2w, p) + SVector{3,T}(1.0,1.0,1.0)
+    v = transform_point(v2w, p) + SVector{3,T}(1.0,1.0,1.0)
     SVector{3,T}(itp_vector_field(1,v...),
                  itp_vector_field(2,v...),
                  itp_vector_field(3,v...) )
