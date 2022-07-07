@@ -98,8 +98,8 @@ AnyTransform{T,F} = Union{AffineTransform{T}, GridTransform{T,F}, InverseGridTra
 """
 Invert AffineTransform transform
 """
-function inv(t::AffineTransform{T})::AffineTransform{T} where {T,F}
-    AffineTransform{T}(Base.inv( [t.rot t.shift;0 0 0 1] ))
+function inv(t::AffineTransform{T})::AffineTransform{T} where {T}
+    AffineTransform{T}(Base.inv( SMatrix{4,4,T,16}([t.rot t.shift;0 0 0 1]) ))
 end
 
 """
