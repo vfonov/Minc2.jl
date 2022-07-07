@@ -3,25 +3,24 @@ using Interpolations
 using ArgParse
 using StaticArrays
 
-function resample_volume(in_vol::Array{Float64,3}, 
-            out_vol::Array{Float64,3}, 
-            v2w::Minc2.AffineTransform{Float64}, 
-            w2v::Minc2.AffineTransform{Float64}, 
-            itfm::Vector{Minc2.AnyTransform{Float64,Float64}};
+function resample_volume(in_vol::Array{T,3}, 
+            out_vol::Array{T,3}, 
+            v2w::Minc2.AffineTransform{C}, 
+            w2v::Minc2.AffineTransform{C}, 
+            itfm::Vector{Minc2.AnyTransform{C,C}};
             interp::I=BSpline(Quadratic(Line(OnCell()))),
             fill=0.0,
             ftol=1.0/80,
-            max_iter=10) where {I}
+            max_iter=10) where {C,T,I}
 
     in_vol_itp = extrapolate( interpolate( in_vol, interp),fill)
 
-    # Threads.@threads
-    for c in CartesianIndices(out_vol)
+    @simd for c in CartesianIndices(out_vol)
         orig = Minc2.transform_point(v2w, c )
-        dst  = Minc2.transform_point(itfm, orig; ftol=ftol, max_iter=max_iter )
-        dst_v= Minc2.transform_point(w2v, dst ) + SA_F64[1.0,1.0,1.0]
+        dst  = Minc2.transform_point(itfm, orig; ftol, max_iter )
+        dst_v= Minc2.transform_point(w2v, dst ) .+ 1.0
         
-        out_vol[c] = in_vol_itp( dst_v... )
+        @inbounds out_vol[c] = in_vol_itp( dst_v... )
         #out_vol[c] = sqrt(sum((orig - dst).^2))
     end
     out_vol
