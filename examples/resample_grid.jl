@@ -3,8 +3,8 @@ using Interpolations
 using ArgParse
 using StaticArrays
 
-function resample_volume(in_vol::Array{T,3}, 
-            out_vol::Array{T,3}, 
+function resample_grid_volume(in_vol::Array{T,4}, 
+            out_vol::Array{T,4}, 
             v2w::Minc2.AffineTransform{C}, 
             w2v::Minc2.AffineTransform{C}, 
             itfm::Vector{Minc2.AnyTransform{C,C}};
@@ -13,19 +13,20 @@ function resample_volume(in_vol::Array{T,3},
             ftol=1.0/80,
             max_iter=10) where {C,T,I}
 
-    in_vol_itp = extrapolate( interpolate( in_vol, interp),fill)
+    # NEED to interpolate only over spatial dimensions
+    in_vol_itp = extrapolate( interpolate( in_vol, (NoInterp(),interp,interp,interp)),fill)
 
-    @simd for c in CartesianIndices(out_vol)
+    @simd for c in CartesianIndices(view(out_vol,1,:,:,:))
         orig = Minc2.transform_point(v2w, c )
         dst  = Minc2.transform_point(itfm, orig; ftol, max_iter )
         dst_v= Minc2.transform_point(w2v, dst ) .+ 1.0
         
-        @inbounds out_vol[c] = in_vol_itp( dst_v... )
-        #out_vol[c] = sqrt(sum((orig - dst).^2))
+        for i in eachindex(view(out_vol,:,1,1,1))
+            @inbounds out_vol[i,c] = in_vol_itp(i, dst_v...)
+        end
     end
     out_vol
 end
-
 
 
 function parse_commandline()
@@ -33,13 +34,13 @@ function parse_commandline()
 
     @add_arg_table s begin
         "in"
-            help = "Input minc file"
+            help = "Input grid minc file"
             required = true
         "transform"
             help = "Transform"
             required = true
         "out"
-            help = "Output minc file"
+            help = "Output grid minc file"
             required = true
         "--like"
             help = "Reference "
@@ -86,21 +87,18 @@ w2v=Minc2.world_to_voxel(in_hdr)
 tfm=Minc2.load_transforms(args["transform"])
 itfm=Minc2.inv(tfm)
 
-#@info "tfm:",tfm , "ixfm:",itfm
-
-
 if args["order"] == 0     # nearest
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Constant())),args["fill"])
-    resample_volume(in_vol, out_vol,v2w,w2v,itfm; interp=BSpline(Constant()),fill=args["fill"])
+    resample_grid_volume(in_vol, out_vol,v2w,w2v,itfm; interp=BSpline(Constant()),fill=args["fill"])
 elseif args["order"] == 1 # linear
-    @timev resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Linear()),fill=args["fill"])
+    @timev resample_grid_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Linear()),fill=args["fill"])
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Linear())),args["fill"])
 elseif args["order"] == 2 # quadratic
-    @timev resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Quadratic(Line(OnCell()))),fill=args["fill"])
+    @timev resample_grid_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Quadratic(Line(OnCell()))),fill=args["fill"])
     #statprofilehtml()
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Quadratic(Line(OnCell())))), args["fill"])
 elseif args["order"] == 3 # cubic
-    resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Cubic(Line(OnCell()))),fill=args["fill"])
+    resample_grid_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Cubic(Line(OnCell()))),fill=args["fill"])
     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Cubic(Line(OnCell())))), args["fill"])
 end
 
