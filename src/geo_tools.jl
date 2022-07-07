@@ -12,30 +12,25 @@ Affine transform
 """
 struct AffineTransform{T} 
     rot::SMatrix{3,3,T,9}
-    shift::SVector{3,T}
-    
-    function AffineTransform{T}(rot::SMatrix{3,3,T,9},
-                                shift::SVector{3,T}) where {T}
-        new(rot, shift)
-    end
-
-    function AffineTransform{T}() where {T}
-        new( SMatrix{3,3,T,9}( [1.0 0.0 0.0 ;0.0 1.0 0.0 ;0.0 0.0 1.0 ]), 
-             SVector{3,T}( [0.0,0.0,0.0] ) )
-    end
-
-    function AffineTransform{T}(mat::Matrix{T}) where {T} 
-        new( SMatrix{3,3,T,9}(mat[1:3,1:3]), SVector{3,T}(mat[1:3,4]))
-    end
-
-    function AffineTransform{T}(mat::SMatrix{4,4,T,16}) where {T} 
-        new( SMatrix{3,3,T,9}(mat[1:3,1:3]), SVector{3,T}(mat[1:3,4]))
-    end
-
-    function AffineTransform{T}(rot::Matrix{T}, shift::Vector{T}) where {T} 
-        new( SMatrix{3,3,T,9}(rot), SVector{3,T}(shift))
-    end
+    shift::SVector{3,T}    
 end
+
+# default transform is identity
+function AffineTransform(::Type{T}) where {T}
+    return AffineTransform( SMatrix{3,3,T,9}( [1 0 0 ;0 1 0 ;0 0 1 ]), 
+                            SVector{3,T}( [0,0,0] ) )
+end
+
+function AffineTransform(mat) 
+    ind = SA[1, 2, 3]
+    return AffineTransform(mat[ind, ind], mat[ind, 4])
+end
+
+function AffineTransform(rot, shift)
+    ind = SA[1, 2, 3]
+    return AffineTransform(rot[ind, ind], shift[ind])
+end
+
 
 """
 Dense vector field transform (grid transform)
@@ -99,7 +94,7 @@ AnyTransform{T,F} = Union{AffineTransform{T}, GridTransform{T,F}, InverseGridTra
 Invert AffineTransform transform
 """
 function inv(t::AffineTransform{T})::AffineTransform{T} where {T}
-    AffineTransform{T}(Base.inv( SMatrix{4,4,T,16}([t.rot t.shift;0 0 0 1]) ))
+    AffineTransform(Base.inv( SMatrix{4,4,T,16}([t.rot t.shift;0 0 0 1]) ))
 end
 
 """

@@ -565,7 +565,7 @@ end
 """
 give AffineTransform for world to voxel transformation based on header
 """
-function voxel_to_world(hdr::MincHeader)::AffineTransform
+function voxel_to_world(hdr::MincHeader)::AffineTransform{Float64}
     rot=zeros(3,3)
     scales=zeros(3,3)
     start=zeros(3)
@@ -581,13 +581,13 @@ function voxel_to_world(hdr::MincHeader)::AffineTransform
     end
     origin=transpose(transpose(start) * rot)
 
-    return AffineTransform{Float64}(scales*rot, origin)
+    return AffineTransform(scales*rot, origin)
 end
 
 """
 give AffineTransform for voxel to world transformation
 """
-function world_to_voxel(hdr::MincHeader)::AffineTransform
+function world_to_voxel(hdr::MincHeader)::AffineTransform{Float64}
     inv(voxel_to_world(hdr))
 end
 

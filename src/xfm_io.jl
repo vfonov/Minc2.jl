@@ -96,10 +96,10 @@ function get_grid_transform(h::TransformHandle;n::Int64=0)
     return (r,inv[]!=0)
 end
 
-function get_linear_transform(h::TransformHandle;n::Int64=0)::AffineTransform
+function get_linear_transform(h::TransformHandle;n::Int64=0)::AffineTransform{Float64}
     mat=zeros(Float64,4,4)
     @minc2_check minc2_simple.minc2_xfm_get_linear_transform(h.x[], n, Base.unsafe_convert(Ptr{Cdouble},mat))
-    return AffineTransform{Float64}(mat)
+    return AffineTransform(mat)
 end
 
 function get_linear_transform_param(h::TransformHandle;n::Int64=0,center::Union{Nothing,Vector{Float64}}=nothing)
@@ -120,15 +120,16 @@ end
 """
 Append affine transform
 """
-function append_linear_transform(h::TransformHandle,lin::AffineTransform)
-    @minc2_check minc2_simple.minc2_xfm_append_linear_transform(h.x[],lin.mat)
+function append_linear_transform(h::TransformHandle, lin::AffineTransform)
+    @minc2_check minc2_simple.minc2_xfm_append_linear_transform(h.x[],
+        Float64[lin.rot lin.shift;0 0 0 1])
 end
 
 """
 Append grid transform 
 """
 function append_grid_transform(h::TransformHandle, grid_file::String;inv::Bool=false)
-    @minc2_check minc2_simple.append_grid_transform(h.x[],grid_file,inv)
+    @minc2_check minc2_simple.append_grid_transform(h.x[], grid_file, inv)
 end
 
 """
