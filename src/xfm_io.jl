@@ -121,21 +121,23 @@ end
 Append affine transform
 """
 function append_linear_transform(h::TransformHandle, lin::AffineTransform)
+    
+    mat=Float64[lin.rot lin.shift;0 0 0 1]
     @minc2_check minc2_simple.minc2_xfm_append_linear_transform(h.x[],
-        Float64[lin.rot lin.shift;0 0 0 1])
+        Base.unsafe_convert(Ptr{Cdouble}, mat) )
 end
 
 """
 Append grid transform 
 """
-function append_grid_transform(h::TransformHandle, grid_file::String;inv::Bool=false)
-    @minc2_check minc2_simple.append_grid_transform(h.x[], grid_file, inv)
+function append_grid_transform(h::TransformHandle, grid_file::String; inv::Bool=false)
+    @minc2_check minc2_simple.minc2_xfm_append_grid_transform(h.x[], grid_file, inv)
 end
 
 """
 
 """
-function concat_xfm(h::TransformHandle,i::TransformHandle)
+function concat_xfm(h::TransformHandle, i::TransformHandle)
     @minc2_check minc2_simple.minc2_xfm_concat_xfm(h.x[], i.x[])
 end
 
@@ -176,7 +178,7 @@ function load_transforms(fname::String)::Vector{AnyTransform{Float64,Float64}}
 end
 
 
-function save_transforms(fname::String, xfm::Vector{AnyTransform};
+function save_transforms(fname::String, xfm::Vector{AnyTransform{Float64,Float64}};
         grid_store::Type{T}=Float32 ) where {T}
     h = TransformHandle()
     grid_ctr=0# count grid files
@@ -184,14 +186,23 @@ function save_transforms(fname::String, xfm::Vector{AnyTransform};
         if x isa AffineTransform
             append_linear_transform(h,x)
         elseif x isa GridTransform
-            grid_file_name=replace(fname,r"","") * "_grid_$(grid_ctr).mnc"
-            #grid_file_base=basename(grid_file_name)
+            grid_file_name=replace(fname,r"\.xfm$"=>"") * "_grid_$(grid_ctr).mnc"
+
             write_minc_volume_std(grid_file_name, grid_store, 
-                create_header_from_v2w(size(x.vector_field),x.v2w), x.vector_field)
+                create_header_from_v2w(size(x.vector_field), x.voxel_to_world,vector_dim=true), 
+                    x.vector_field)
             
-            append_grid_transform(h,grid_file_name)
+            append_grid_transform(h, grid_file_name)
+
+            grid_ctr+=1
         elseif x isa InverseGridTransform
-            append_grid_transform(h,grid_file_name;inv=true)
+            grid_file_name=replace(fname,r"\.xfm$"=>"") * "_grid_$(grid_ctr).mnc"
+
+            write_minc_volume_std(grid_file_name, grid_store, 
+                create_header_from_v2w(size(x.vector_field), x.voxel_to_world,vector_dim=true), 
+                    x.vector_field)
+            
+            append_grid_transform(h,grid_file_name; inv=true)
         else
             throw( Minc2Error("Unsupported transform: $x"))
         end 

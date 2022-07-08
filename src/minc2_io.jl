@@ -595,10 +595,10 @@ end
 generate header from the voxel to world transform and volume size
 """
 function create_header_from_v2w(
-        sz, t::AffineTransform;
+        sz, t::AffineTransform{T};
         vector_dim::Bool=false, 
         time_step::Union{Float64,Nothing}=nothing,
-        time_start::Union{Float64,Nothing}=nothing)::MincHeader
+        time_start::Union{Float64,Nothing}=nothing)::MincHeader where {T}
 
     time_dim = !isnothing(time_step) && !isnothing(time_start)
 
@@ -618,7 +618,7 @@ function create_header_from_v2w(
         if vector_dim && i==1 # vector dimension
             hdr.start[i] = 0
             hdr.step[i] = 1.0
-            hdr.dir_cos_valid = false
+            hdr.dir_cos_valid[i] = false
             hdr.dir_cos[i,:] = [0,0,0]
             hdr.axis[i] = DIM_VEC
         elseif time_dim && (i-vector_dim)==4 # time dimension
