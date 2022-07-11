@@ -144,7 +144,7 @@ Apply forward grid transform
 """
 @inline function transform_point(tfm::GridTransform{T,F}, p::SVector{3,T};
         _whatever...)::SVector{3,T} where {T,F}
-    return p + interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field)
+    return p + interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, p)
 end
 
 """
