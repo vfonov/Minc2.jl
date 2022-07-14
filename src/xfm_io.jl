@@ -99,7 +99,7 @@ end
 function get_linear_transform(h::TransformHandle;n::Int64=0)::AffineTransform{Float64}
     mat=zeros(Float64,4,4)
     @minc2_check minc2_simple.minc2_xfm_get_linear_transform(h.x[], n, Base.unsafe_convert(Ptr{Cdouble},mat))
-    return AffineTransform(mat)
+    return AffineTransform(mat')
 end
 
 function get_linear_transform_param(h::TransformHandle;n::Int64=0,center::Union{Nothing,Vector{Float64}}=nothing)
@@ -122,7 +122,7 @@ Append affine transform
 """
 function append_linear_transform(h::TransformHandle, lin::AffineTransform)
     
-    mat=Float64[lin.rot lin.shift;0 0 0 1]
+    mat = Matrix{Float64}( Float64[lin.rot lin.shift;0 0 0 1]')
     @minc2_check minc2_simple.minc2_xfm_append_linear_transform(h.x[],
         Base.unsafe_convert(Ptr{Cdouble}, mat) )
 end

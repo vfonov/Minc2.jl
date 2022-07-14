@@ -7,6 +7,20 @@ using Interpolations
 # for quick operations
 using StaticArrays
 
+
+"""
+Identity transform
+"""
+struct IdentityTransform
+end
+
+@inline function transform_point(tfm::IdentityTransform, 
+    p::SVector{3,T};
+    _whatever...)::SVector{3,T} where {T}
+    p
+end
+
+
 """
 Affine transform
 """
@@ -16,10 +30,10 @@ struct AffineTransform{T}
 end
 
 # default transform is identity
-function AffineTransform(::Type{T}) where {T}
+function AffineTransform(::Type{T}=Float64) where {T}
     return AffineTransform( SMatrix{3,3,T,9}( [1 0 0 ;0 1 0 ;0 0 1 ]), 
-                            SVector{3,T}( [0,0,0] ) )
-end
+                             SVector{3,T}( [0,0,0] ) )
+ end
 
 function AffineTransform(mat) 
     ind = SA[1, 2, 3]
@@ -27,8 +41,8 @@ function AffineTransform(mat)
 end
 
 function AffineTransform(rot, shift)
-    ind = SA[1, 2, 3]
-    return AffineTransform(rot[ind, ind], shift[ind])
+     ind = SA[1, 2, 3]
+     return AffineTransform(rot[ind, ind], shift[ind])
 end
 
 
@@ -87,7 +101,15 @@ end
 """
 AnyTransform
 """
-AnyTransform{T,F} = Union{AffineTransform{T}, GridTransform{T,F}, InverseGridTransform{T,F}}
+AnyTransform{T,F} = Union{IdentityTransform, AffineTransform{T}, GridTransform{T,F}, InverseGridTransform{T,F}}
+
+
+"""
+Invert AffineTransform transform
+"""
+function inv(t::IdentityTransform)::IdentityTransform
+    IdentityTransform()
+end
 
 
 """
