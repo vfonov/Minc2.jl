@@ -8,10 +8,16 @@ using Interpolations
 using StaticArrays
 
 
+
+"""
+Any Goemetrical transform
+"""
+abstract type AnyTransform end
+
 """
 Identity transform
 """
-struct IdentityTransform
+struct IdentityTransform <: AnyTransform
 end
 
 @inline function transform_point(tfm::IdentityTransform, 
@@ -24,7 +30,7 @@ end
 """
 Affine transform
 """
-struct AffineTransform{T} 
+struct AffineTransform{T} <: AnyTransform
     rot::SMatrix{3,3,T,9}
     shift::SVector{3,T}    
 end
@@ -49,7 +55,7 @@ end
 """
 Dense vector field transform (grid transform)
 """
-struct GridTransform{T,F}
+struct GridTransform{T,F} <: AnyTransform
     voxel_to_world::AffineTransform{T}
     world_to_voxel::AffineTransform{T}
     vector_field::Array{F, 4}
@@ -74,7 +80,7 @@ end
 """
 Dense vector field transform (grid transform) used in inverse
 """
-struct InverseGridTransform{T,F}
+struct InverseGridTransform{T,F} <: AnyTransform
     voxel_to_world::AffineTransform{T}
     world_to_voxel::AffineTransform{T}
     vector_field::Array{F, 4}
@@ -101,7 +107,7 @@ end
 """
 AnyTransform
 """
-AnyTransform{T,F} = Union{IdentityTransform, AffineTransform{T}, GridTransform{T,F}, InverseGridTransform{T,F}}
+#AnyTransform{T,F} = Union{IdentityTransform, AffineTransform{T}, GridTransform{T,F}, InverseGridTransform{T,F}}
 
 
 """
@@ -137,7 +143,7 @@ end
 """
 Invert concatenated transform
 """
-function inv(t::Vector{AnyTransform{T,F}})::Vector{AnyTransform{T,F}} where {T,F}
+function inv(t::Vector{AnyTransform})::Vector{AnyTransform} where {T,F}
     [inv(i) for i in reverse(t)]
 end
 
@@ -201,7 +207,7 @@ end
 """
 Apply concatenated transform
 """
-@inline function transform_point(tfm::Vector{AnyTransform{T,F}}, 
+@inline function transform_point(tfm::Vector{AnyTransform}, 
         p::SVector{3,T};
         max_iter::Int=10,ftol::Float64=1.0/80)::SVector{3,T} where {T,F}
     o=p

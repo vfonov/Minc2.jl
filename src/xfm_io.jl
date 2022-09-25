@@ -144,8 +144,8 @@ end
 """
 High level interface to load complete transform into memory 
 """
-function load_transforms(h::TransformHandle)::Vector{AnyTransform{Float64,Float64}}
-    r=Vector{AnyTransform{Float64,Float64}}()
+function load_transforms(h::TransformHandle)::Vector{AnyTransform}
+    r=Vector{AnyTransform}()
     for i in 1:get_n_concat(h)
         t=get_n_type(h,n=i-1)
         if t==MINC2_XFM_LINEAR
@@ -172,13 +172,13 @@ end
 """
 High level interface to load complete transform into memory 
 """
-function load_transforms(fname::String)::Vector{AnyTransform{Float64,Float64}} 
+function load_transforms(fname::String)::Vector{AnyTransform} 
     h = Minc2.open_xfm_file(fname)
     load_transforms(h)
 end
 
 
-function save_transforms(fname::String, xfm::Vector{AnyTransform{Float64,Float64}};
+function save_transforms(fname::String, xfm::Vector{AnyTransform};
         grid_store::Type{T}=Float32 ) where {T}
     h = TransformHandle()
     grid_ctr=0# count grid files
@@ -203,6 +203,8 @@ function save_transforms(fname::String, xfm::Vector{AnyTransform{Float64,Float64
                     x.vector_field)
             
             append_grid_transform(h,grid_file_name; inv=true)
+        elseif x isa IdentityTransform
+            # do nothing, just skip iver
         else
             throw( Minc2Error("Unsupported transform: $x"))
         end 

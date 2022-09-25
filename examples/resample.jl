@@ -7,7 +7,7 @@ function resample_volume(in_vol::Array{T,3},
             out_vol::Array{T,3}, 
             v2w::Minc2.AffineTransform{C}, 
             w2v::Minc2.AffineTransform{C}, 
-            itfm::Vector{Minc2.AnyTransform{C,C}};
+            itfm::Vector{Minc2.AnyTransform};
             interp::I=BSpline(Quadratic(Line(OnCell()))),
             fill=0.0,
             ftol=1.0/80,
