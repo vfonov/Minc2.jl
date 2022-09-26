@@ -3,28 +3,28 @@ using Interpolations
 using ArgParse
 using StaticArrays
 
-function resample_volume(in_vol::Array{T,3}, 
-            out_vol::Array{T,3}, 
-            v2w::Minc2.AffineTransform{C}, 
-            w2v::Minc2.AffineTransform{C}, 
-            itfm::Vector{Minc2.AnyTransform};
-            interp::I=BSpline(Quadratic(Line(OnCell()))),
-            fill=0.0,
-            ftol=1.0/80,
-            max_iter=10) where {C,T,I}
+# function resample_volume(in_vol::Array{T,3}, 
+#             out_vol::Array{T,3}, 
+#             v2w::Minc2.AffineTransform{C}, 
+#             w2v::Minc2.AffineTransform{C}, 
+#             itfm::Vector{Minc2.AnyTransform};
+#             interp::I=BSpline(Quadratic(Line(OnCell()))),
+#             fill=0.0,
+#             ftol=1.0/80,
+#             max_iter=10) where {C,T,I}
 
-    in_vol_itp = extrapolate( interpolate( in_vol, interp),fill)
+#     in_vol_itp = extrapolate( interpolate( in_vol, interp),fill)
 
-    @simd for c in CartesianIndices(out_vol)
-        orig = Minc2.transform_point(v2w, c )
-        dst  = Minc2.transform_point(itfm, orig; ftol, max_iter )
-        dst_v= Minc2.transform_point(w2v, dst ) .+ 1.0
+#     @simd for c in CartesianIndices(out_vol)
+#         orig = Minc2.transform_point(v2w, c )
+#         dst  = Minc2.transform_point(itfm, orig; ftol, max_iter )
+#         dst_v= Minc2.transform_point(w2v, dst ) .+ 1.0
         
-        @inbounds out_vol[c] = in_vol_itp( dst_v... )
-        #out_vol[c] = sqrt(sum((orig - dst).^2))
-    end
-    out_vol
-end
+#         @inbounds out_vol[c] = in_vol_itp( dst_v... )
+#         #out_vol[c] = sqrt(sum((orig - dst).^2))
+#     end
+#     out_vol
+# end
 
 
 
@@ -67,42 +67,47 @@ end
 args = parse_commandline()
 
 
-in_vol,in_hdr,in_store_hdr = Minc2.read_minc_volume_std(args["in"], Float64)
-
+#in_vol,in_hdr,in_store_hdr = Minc2.read_minc_volume_std(args["in"], Float64)
+in_vol=Minc2.read_volume(args["in"],store=Float64)
 #@info "in_vol:",size(in_vol)
 #@info "in_hdr:",in_hdr
 
 if !isnothing(args["like"])
-    out_vol,out_hdr,out_store_hdr = Minc2.empty_like_minc_volume_std(args["like"],Float64)
+    #out_vol,out_hdr,out_store_hdr = Minc2.empty_like_minc_volume_std(args["like"],Float64)
+    out_vol = Minc2.empty_volume_like(args["like"],Float64)
 else
-    out_vol = Array{Float64}(undef, size(in_vol)...)
-    out_hdr = in_hdr
-    out_store_hdr = in_store_hdr
+    # out_vol = Array{Float64}(undef, size(in_vol)...)
+    # out_hdr = in_hdr
+    # out_store_hdr = in_store_hdr
+    out_vol = Minc2.empty_volume_like(in_vol)
 end
 
-v2w=Minc2.voxel_to_world(out_hdr)
-w2v=Minc2.world_to_voxel(in_hdr)
+# v2w=Minc2.voxel_to_world(out_hdr)
+# w2v=Minc2.world_to_voxel(in_hdr)
 
 tfm=Minc2.load_transforms(args["transform"])
-itfm=Minc2.inv(tfm)
+#itfm=Minc2.inv(tfm)
 
 #@info "tfm:",tfm , "ixfm:",itfm
 
 
-if args["order"] == 0     # nearest
-    #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Constant())),args["fill"])
-    resample_volume(in_vol, out_vol,v2w,w2v,itfm; interp=BSpline(Constant()),fill=args["fill"])
-elseif args["order"] == 1 # linear
-    @timev resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Linear()),fill=args["fill"])
-    #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Linear())),args["fill"])
-elseif args["order"] == 2 # quadratic
-    @timev resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Quadratic(Line(OnCell()))),fill=args["fill"])
-    #statprofilehtml()
-    #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Quadratic(Line(OnCell())))), args["fill"])
-elseif args["order"] == 3 # cubic
-    resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Cubic(Line(OnCell()))),fill=args["fill"])
-    #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Cubic(Line(OnCell())))), args["fill"])
-end
+# if args["order"] == 0     # nearest
+#     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Constant())),args["fill"])
+#     #resample_volume(in_vol, out_vol,v2w,w2v,itfm; interp=BSpline(Constant()),fill=args["fill"])
+# elseif args["order"] == 1 # linear
+#     @timev resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Linear()),fill=args["fill"])
+#     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Linear())),args["fill"])
+# elseif args["order"] == 2 # quadratic
+#     @timev resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Quadratic(Line(OnCell()))),fill=args["fill"])
+#     #statprofilehtml()
+#     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Quadratic(Line(OnCell())))), args["fill"])
+# elseif args["order"] == 3 # cubic
+#     resample_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Cubic(Line(OnCell()))),fill=args["fill"])
+#     #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Cubic(Line(OnCell())))), args["fill"])
+# end
+
+Minc2.resample_volume!(out_vol,in_vol;tfm,order=args["order"],fill=args["fill"],ftol=args["ftol"],max_iter=args["max_iter"])
 
 
-Minc2.write_minc_volume_std(args["out"], UInt16, out_store_hdr, out_vol)
+#Minc2.write_minc_volume_std(args["out"], UInt16, out_store_hdr, out_vol)
+Minc2.save_volume(args["out"],out_vol,store=UInt16)

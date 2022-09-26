@@ -109,6 +109,8 @@ AnyTransform
 """
 #AnyTransform{T,F} = Union{IdentityTransform, AffineTransform{T}, GridTransform{T,F}, InverseGridTransform{T,F}}
 
+GeoTransforms=Vector{AnyTransform}
+
 
 """
 Invert AffineTransform transform
