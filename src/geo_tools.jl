@@ -10,7 +10,7 @@ using StaticArrays
 
 
 """
-Any Goemetrical transform
+Any 3D Geometrical transform
 """
 abstract type AnyTransform end
 
