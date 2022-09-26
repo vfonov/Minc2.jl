@@ -5,19 +5,9 @@ using StaticArrays
 using Optim
 using ImageFiltering # for smoothing
 
-function save_volume(fn, vol;store::Type{T}=Float32) where {T}
-    Minc2.write_minc_volume_std(fn, store, 
-        Minc2.create_header_from_v2w(size(vol.vol), vol.v2w,vector_dim=(length(size(vol.vol))==4)), vol.vol)
-end
-
-function read_volume(fn)
-    in_vol,in_hdr,in_store_hdr = Minc2.read_minc_volume_std(fn, Float64)
-    v2w=Minc2.voxel_to_world(in_hdr)
-    return (vol=in_vol,v2w=v2w)
-end
 
 
-function resample_volume!(out,
+function resample_volume_affine(out,
             in;
             itfm=Minc2.IdentityTransform(),
             interp=BSpline(Linear()),
@@ -100,8 +90,8 @@ args = parse_commandline()
 
 
 #in_vol,in_hdr,in_store_hdr = Minc2.read_minc_volume_std(args["in"], Float64)
-in1=read_volume(args["in1"])
-in2=read_volume(args["in2"])
+in1=Minc2.read_volume(args["in1"])
+in2=Minc2.read_volume(args["in2"])
 
 if !isnothing(args["transform"])
     @info "loading",args["transform"]

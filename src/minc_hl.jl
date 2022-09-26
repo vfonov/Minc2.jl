@@ -39,7 +39,7 @@ end
 
 
 
-function resample_volume(in_vol::Array{T,3}, 
+function resample_volume!(in_vol::Array{T,3}, 
     out_vol::Array{T,3}, 
     v2w::Minc2.AffineTransform{C}, 
     w2v::Minc2.AffineTransform{C}, 
@@ -65,12 +65,12 @@ end
 
 
 # TODO merge with next
-function resample_grid_volume(
+function resample_grid_volume!(
     in_vol::Array{T,4}, 
     out_vol::Array{T,4}, 
     v2w::Minc2.AffineTransform{C}, 
     w2v::Minc2.AffineTransform{C}, 
-    itfm::Vector{Minc2.AnyTransform};
+    itfm::GeoTransforms;
     interp::I=BSpline(Quadratic(Line(OnCell()))),
     fill=0.0,
     ftol=1.0/80,
@@ -173,7 +173,7 @@ function resample_volume!(out_vol::Volume3D, in_vol::Volume3D;
     end
 
     #TODO: extend this to grid support 
-    resample_volume(in_vol.vol, out_vol.vol,in_vol.v2w, Minc2.inv(out_vol.v2w), itfm; interp,ftol, max_iter)
+    resample_volume!(in_vol.vol, out_vol.vol,in_vol.v2w, Minc2.inv(out_vol.v2w), itfm; interp,ftol, max_iter)
 end
 
 #TODO: make this more generic , and make it work with label 
@@ -215,5 +215,49 @@ function resample_grid_volume!(
         fill=zero(eltype(out_vol.vol))
     end
 
-    resample_grid_volume(in_vol.vol, out_vol.vol,in_vol.v2w, Minc2.inv(out_vol.v2w), itfm; interp,ftol, max_iter)
+    resample_grid_volume!(in_vol.vol, out_vol.vol,in_vol.v2w, Minc2.inv(out_vol.v2w), itfm; interp,ftol, max_iter)
 end
+
+function calculate_jacobian!(
+    out_vol::Array{T,3}, 
+    v2w::Minc2.AffineTransform{C},
+    tfm::GeoTransforms;
+    interp::I=BSpline(Quadratic(Line(OnCell()))),
+    fill=0.0,
+    ftol=1.0/80,
+    max_iter=10) where {C,T,I}
+
+    # calculate scaling matrix from the voxel to world matrix
+    f = svd(v2w.rot)
+    dir_cos = f.U * f.Vt
+    sc = Base.inv(v2w.rot * Base.inv(dir_cos))
+    @info "Scaling matrix" sc
+
+    # First step: generate vector field of transformations
+    vector_field = Array{T}(undef, 3, size(out_vol)...)
+
+    @simd for c in CartesianIndices(out_vol)
+    orig = Minc2.transform_point(v2w, c )
+    dst  = Minc2.transform_point(tfm, orig; ftol, max_iter )
+
+    @inbounds vector_field[:,c] .= dst # .- orig
+    end
+
+    # Second step: calculate jacobian determinant 
+    vector_field_itp = extrapolate( interpolate( vector_field, (NoInterp(),interp,interp,interp)), Flat())
+
+    @simd for c in CartesianIndices(out_vol)
+    grad = hcat([ Interpolations.gradient( vector_field_itp, i, Tuple(c)...) for i in 1:3 ]...)
+    out_vol[c] = det(grad'*sc)
+    end
+
+    out_vol
+end
+
+function calculate_jacobian!(out_vol::Volume3D,tfm::GeoTransforms;interp=BSpline(Quadratic(Line(OnCell()))),
+    fill=0.0,
+    ftol=1.0/80,
+    max_iter=10)
+    calculate_jacobian!(out_vol.vol,out_vol.v2w,tfm;interp,fill,ftol,max_iter)
+end
+
