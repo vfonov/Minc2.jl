@@ -110,4 +110,4 @@ Minc2.resample_volume!(out_vol,in_vol;tfm,order=args["order"],fill=args["fill"],
 
 
 #Minc2.write_minc_volume_std(args["out"], UInt16, out_store_hdr, out_vol)
-Minc2.save_volume(args["out"],out_vol,store=UInt16)
+Minc2.save_volume(args["out"],out_vol,store=UInt16,history=Minc2.format_history(ARGS))

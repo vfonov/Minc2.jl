@@ -315,6 +315,19 @@ function empty_like_minc_volume_std(path::String, ::Type{T}=Float32 ) where {T}
     return volume, hdr, store_hdr
 end
 
+"""
+allocate empty volume using path
+return volume, representation header,storage header
+"""
+function empty_like_minc_volume_std_history(path::String, ::Type{T}=Float32 ) where {T}
+    handle = open_minc_file(path)
+    volume, hdr, store_hdr = empty_like_minc_volume_std(handle,T)
+    history = read_history(handle)
+    close_minc_file(handle)
+
+    return volume, hdr, store_hdr, history
+end
+
 
 """
 Read the actual volume using path
@@ -327,6 +340,21 @@ function read_minc_volume_std(path::String, ::Type{T}=Float32 ) where {T}
 
     return volume, hdr, store_hdr
 end
+
+
+"""
+Read the actual volume using path
+return volume, representation header,storage header
+"""
+function read_minc_volume_std_history(path::String, ::Type{T}=Float32 ) where {T}
+    handle = open_minc_file(path)
+    volume, hdr, store_hdr = read_minc_volume_std(handle,T)
+    history = read_history(handle)
+    close_minc_file(handle)
+
+    return volume, hdr, store_hdr, history
+end
+
 
 
 """
@@ -353,6 +381,20 @@ function read_minc_volume_raw(path::String, ::Type{T}=Float32 ) where {T}
 
     return volume, store_hdr
 end
+
+"""
+Read the actual volume using path
+return volume, representation header,storage header
+"""
+function read_minc_volume_raw_history(path::String, ::Type{T}=Float32 ) where {T}
+    handle = open_minc_file(path)
+    volume, store_hdr = read_minc_volume_raw(handle,T)
+    history = read_history(h)
+    close_minc_file(handle)
+
+    return volume, store_hdr, history
+end
+
 
 
 """
@@ -540,7 +582,7 @@ end
 """
 return history string
 """
-function read_history(i::VolumeHandle)::Union{String, Missing}
+function read_history(i::VolumeHandle)::Union{String, Nothing}
     return read_attribute(i,"","history")
 end
 
@@ -548,7 +590,7 @@ end
 write history string
 """
 function write_history(i::VolumeHandle,history::String)
-write_attribute(i,"","history",history)
+    write_attribute(i,"","history",history)
 end
 
 """
@@ -665,7 +707,7 @@ function write_minc_volume_std(path::String, ::Type{Store},
         create_minc_file(handle,path)
 
         if !isnothing(history)
-            write_minc_history(handle,history)
+            write_history(handle,history)
         end
 
         write_minc_volume_std(handle,volume)
@@ -682,7 +724,7 @@ function write_minc_volume_std(path::String, ::Type{Store},
         copy_minc_metadata(in_h,handle)
 
         if !isnothing(history)
-            write_minc_history(handle,history)
+            write_history(handle,history)
         end
 
         write_minc_volume_std(handle,volume)

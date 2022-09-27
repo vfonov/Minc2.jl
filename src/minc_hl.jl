@@ -1,6 +1,7 @@
 # for resampling
 using Interpolations
-
+# for minc history
+using Dates
 
 """
 An abstract 3D volume
@@ -8,33 +9,41 @@ An abstract 3D volume
 struct Volume3D
     vol # an abstract volume
     v2w # transformation from voxel to world coordinates
+    history # file metadata: history
 end
 
 function read_volume(fn::String; store::Type{T}=Float64) where {T}
-    in_vol,in_hdr,in_store_hdr = Minc2.read_minc_volume_std(fn, store)
+    in_vol,in_hdr,in_store_hdr,in_history = Minc2.read_minc_volume_std_history(fn, store)
     v2w=Minc2.voxel_to_world(in_hdr)
 
-    return Volume3D(in_vol,v2w)
+    return Volume3D(in_vol,v2w,in_history)
 end
 
 
 function empty_volume_like(fn::String; store::Type{T}=Float64) where {T}
-    out_vol,out_hdr,out_store_hdr = Minc2.empty_like_minc_volume_std(fn,store)
+    out_vol,out_hdr,out_store_hdr,history = Minc2.empty_like_minc_volume_std_history(fn,store)
     v2w=Minc2.voxel_to_world(out_hdr)
 
-    return Volume3D(out_vol,v2w)
+    return Volume3D(out_vol,v2w,history)
 end
 
 
 function empty_volume_like(vol::Volume3D; store::Type{T}=Float64) where {T}
     out_vol = Array{Float64}(undef, size(vol.vol)...)
-    return Volume3D(out_vol,vol.v2w)
+    return Volume3D(out_vol,vol.v2w,vol.history)
 end
 
 
-function save_volume(fn, vol::Volume3D; store::Type{T}=Float32) where {T}
+function save_volume(fn, vol::Volume3D; store::Type{T}=Float32,history=nothing) where {T}
+    if isnothing(history)
+        _history=vol.history
+    else
+        _history=vol.history*"\n"*history
+    end
+
     Minc2.write_minc_volume_std(fn, store, 
-      Minc2.create_header_from_v2w(size(vol.vol), vol.v2w, vector_dim=(length(size(vol.vol))==4)), vol.vol)
+      Minc2.create_header_from_v2w(size(vol.vol), vol.v2w, 
+      vector_dim=(length(size(vol.vol))==4)), vol.vol; history=_history)
 end
 
 
@@ -261,3 +270,9 @@ function calculate_jacobian!(out_vol::Volume3D,tfm::GeoTransforms;interp=BSpline
     calculate_jacobian!(out_vol.vol,out_vol.v2w,tfm;interp,fill,ftol,max_iter)
 end
 
+# generate minc-style history from program args
+function format_history(args)
+    #stamp=strftime("%a %b %d %T %Y>>>", gmtime())
+    # Thu Jul 30 14:23:47 2009
+    return Dates.format(now(),"e d u HH:MM:SS YYYY")*">>>"*join(args," ")
+end
