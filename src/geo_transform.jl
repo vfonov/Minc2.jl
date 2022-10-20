@@ -229,6 +229,23 @@ Apply affine transform to CartesianIndices
 end
 
 
+"""
+Decompose affine transform into three components
+start, step, direction cosines
+"""
+function decompose(tfm::AffineTransform{T}) where {T}
+    f = svd(tfm.rot)
+
+    # remove scaling
+    dir_cos = tfm.U * tfm.Vt
+
+    step  = diag(tfm.rot         * Base.inv(dir_cos))
+    start = transpose(tfm.shift) * Base.inv(dir_cos)
+    
+    return start, step, dir_cos
+end
+
+
 # helper 
 Base.show(io::IO, z::GridTransform{T}) where {T} = print(io, "GridTransform:", size(z.vector_field))
 # helper 

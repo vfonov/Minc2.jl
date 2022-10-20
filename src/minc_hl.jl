@@ -237,33 +237,32 @@ function calculate_jacobian!(
     max_iter=10) where {C,T,I}
 
     # calculate scaling matrix from the voxel to world matrix
-    f = svd(v2w.rot)
-    dir_cos = f.U * f.Vt
-    sc = Base.inv(v2w.rot * Base.inv(dir_cos))
+    _,step,_ = decompose(v2w)
+    sc = diagm(step) #Base.inv(v2w.rot * Base.inv(dir_cos))
     #@info "Scaling matrix" sc
 
     # First step: generate vector field of transformations
     vector_field = Array{T}(undef, 3, size(out_vol)...)
 
     @simd for c in CartesianIndices(out_vol)
-    orig = Minc2.transform_point(v2w, c )
-    dst  = Minc2.transform_point(tfm, orig; ftol, max_iter )
+        orig = Minc2.transform_point(v2w, c )
+        dst  = Minc2.transform_point(tfm, orig; ftol, max_iter )
 
-    @inbounds vector_field[:,c] .= dst # .- orig
+        @inbounds vector_field[:,c] .= dst # .- orig
     end
 
     # Second step: calculate jacobian determinant 
     vector_field_itp = extrapolate( interpolate( vector_field, (NoInterp(),interp,interp,interp)), Flat())
 
     @simd for c in CartesianIndices(out_vol)
-    grad = hcat([ Interpolations.gradient( vector_field_itp, i, Tuple(c)...) for i in 1:3 ]...)
-    out_vol[c] = det(grad'*sc)
+        grad = hcat([ Interpolations.gradient( vector_field_itp, i, Tuple(c)...) for i in 1:3 ]...)
+        out_vol[c] = det(grad'*sc)
     end
 
     out_vol
 end
 
-function calculate_jacobian!(out_vol::Volume3D,tfm::GeoTransforms;interp=BSpline(Quadratic(Line(OnCell()))),
+function calculate_jacobian!(out_vol::Volume3D, tfm::GeoTransforms; interp=BSpline(Quadratic(Line(OnCell()))),
     fill=0.0,
     ftol=1.0/80,
     max_iter=10)
