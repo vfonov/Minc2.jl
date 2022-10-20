@@ -240,7 +240,7 @@ function calculate_jacobian!(
     f = svd(v2w.rot)
     dir_cos = f.U * f.Vt
     sc = Base.inv(v2w.rot * Base.inv(dir_cos))
-    @info "Scaling matrix" sc
+    #@info "Scaling matrix" sc
 
     # First step: generate vector field of transformations
     vector_field = Array{T}(undef, 3, size(out_vol)...)
