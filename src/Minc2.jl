@@ -16,5 +16,7 @@ include("xfm_io.jl")
 # high level functions
 include("minc_hl.jl")
 
+# ITK and NIFTI interface
+include("nifti_io.jl")
 
 end # module

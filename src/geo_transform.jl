@@ -145,7 +145,7 @@ end
 """
 Invert concatenated transform
 """
-function inv(t::Vector{AnyTransform})::Vector{AnyTransform} where {T,F}
+function inv(t::Vector{T})::Vector{T} where T<:AnyTransform
     [inv(i) for i in reverse(t)]
 end
 
@@ -209,9 +209,10 @@ end
 """
 Apply concatenated transform
 """
-@inline function transform_point(tfm::Vector{AnyTransform}, 
+@inline function transform_point(
+        tfm::Vector{XFM},
         p::SVector{3,T};
-        max_iter::Int=10,ftol::Float64=1.0/80)::SVector{3,T} where {T,F}
+        max_iter::Int=10,ftol::Float64=1.0/80)::SVector{3,T} where {XFM<:AnyTransform,T,F}
     o=p
     for t in tfm
         o = transform_point(t,o;max_iter,ftol)
@@ -237,7 +238,7 @@ function decompose(tfm::AffineTransform{T}) where {T}
     f = svd(tfm.rot)
 
     # remove scaling
-    dir_cos = tfm.U * tfm.Vt
+    dir_cos = f.U * f.Vt
 
     step  = diag(tfm.rot         * Base.inv(dir_cos))
     start = transpose(tfm.shift) * Base.inv(dir_cos)

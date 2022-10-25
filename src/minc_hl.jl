@@ -52,11 +52,11 @@ function resample_volume!(in_vol::Array{T,3},
     out_vol::Array{T,3}, 
     v2w::Minc2.AffineTransform{C}, 
     w2v::Minc2.AffineTransform{C}, 
-    itfm::Vector{Minc2.AnyTransform};
+    itfm::Vector{XFM};
     interp::I=BSpline(Quadratic(Line(OnCell()))),
     fill=0.0,
     ftol=1.0/80,
-    max_iter=10) where {C,T,I}
+    max_iter=10) where {C,T,I, XFM<:Minc2.AnyTransform}
 
     in_vol_itp = extrapolate( interpolate( in_vol, interp),fill)
 
