@@ -32,7 +32,7 @@ Affine transform
 """
 struct AffineTransform{T} <: AnyTransform
     rot::SMatrix{3,3,T,9}
-    shift::SVector{3,T}    
+    shift::SVector{3,T}
 end
 
 # default transform is identity
@@ -45,6 +45,7 @@ function AffineTransform(mat)
     ind = SA[1, 2, 3]
     return AffineTransform(mat[ind, ind], mat[ind, 4])
 end
+
 
 function AffineTransform(rot, shift)
      ind = SA[1, 2, 3]

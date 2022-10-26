@@ -1,5 +1,5 @@
 using NIfTI
-
+using Rotations
 
 function read_nifti_volume(fn::String; store::Type{T}=Float64) where {T}
     ni = niread(fn)
@@ -26,11 +26,16 @@ function save_nifti_volume(fn, vol::Volume3D; store::Type{T}=Float32,history=not
     end
 
     start, step, dir_cos = decompose(vol.v2w)
-    orientation=Matrix{Float32}([dir_cos start'])
+    R_quat = Rotations.params(QuatRotation(dir_cos))
 
-    ni=NIVolume(map(x->convert(store, x),vol.vol); 
-                voxel_size=Tuple(Float32(x) for x in step),
-                orientation= orientation)
+    ni=NIVolume(map(x->convert(store, x),vol.vol),
+        qfac=1.0f0,
+        quatern_b= R_quat[2],  quatern_c=R_quat[3], quatern_d=R_quat[4],
+        qoffset_x= start[1,1], qoffset_y=start[1,2],qoffset_z=start[1,3],
+        voxel_size=Tuple(Float32(i) for i in step),
+        xyzt_units=Int8(2),regular=Int8('r'))
+    
+    #setaffine(ni.header, [vol.v2w.rot vol.v2w.shift;0 0 0 1])
     # TODO: deal with vectors (?)
     niwrite(fn,ni)
 end
@@ -44,12 +49,12 @@ end
 
 function read_itk_transform(fn::String)
     # replicating https://github.com/InsightSoftwareConsortium/ITK/blob/master/Modules/IO/TransformInsightLegacy/src/itkTxtTransformIO.cxx
-    transform_type=""
+    _delimiters=[' ', '\t', '\n','\r']
     parameters=Float64[]
     fixed_parameters=Float64[]
     transform_type=""
     for line in eachline(fn)
-        line = strip(line,[' ', '\t', '\n','\r'])
+        line = strip(line,_delimiters)
 
         if length(line) == 0
               continue
@@ -59,11 +64,11 @@ function read_itk_transform(fn::String)
         end
         # parse tags: name : value 
         # will throw an error if format is different
-        @info line
+        #@info line
         (tag_name, tag_val) = split(line,":"; limit=2)
-        tag_name = strip(tag_name,[' ', '\t', '\n','\r'])
+        tag_name = strip(tag_name,_delimiters)
         if tag_name == "Transform"
-            transform_type = strip(tag_val,[' ', '\t', '\n','\r'])
+            transform_type = strip(tag_val,_delimiters)
         elseif tag_name == "ComponentTransformFile"
             # not supported for now
         elseif tag_name == "Parameters"
@@ -84,7 +89,7 @@ function read_itk_transform(fn::String)
         # ignoring fixed parameters
         @assert tfm_dims=="3_3"
         @assert length(parameters) == 12
-        return Minc2.AffineTransform(reshape(parameters[1:9],3,3),parameters[10:12])
+        return Minc2.AffineTransform(reshape(parameters[1:9],3,3)',parameters[10:12])
     else
         throw( Minc2Error("Unsupported transform type \"$tfm_type\""))
     end

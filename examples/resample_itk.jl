@@ -53,10 +53,17 @@ end
 
 
 #tfm = Minc2.load_transforms(args["transform"])
-tfm = [Minc2.read_itk_transform(args["transform"])]
-@info tfm
+tfm = Minc2.inv(Minc2.AnyTransform[
+     Minc2.AffineTransform([-1.0 0.0 0.0;0 1.0 0;0 0 1.0],  [0. 0 0]),
+     Minc2.read_itk_transform(args["transform"]),
+     Minc2.AffineTransform([-1.0 0.0 0.0;0.0 1.0 0;0 0 1.0],[0. 0 0])
+     ])
+#tfm=Minc2.AnyTransform[Minc2.AffineTransform()]
+
+@info "Input v2w" in_vol.v2w
+@info "Transform" tfm
 
 
-Minc2.resample_volume!(out_vol,in_vol;tfm,order=args["order"],fill=args["fill"],ftol=args["ftol"],max_iter=args["max_iter"])
+Minc2.resample_volume!(out_vol, in_vol; tfm, order=args["order"], fill=args["fill"], ftol=args["ftol"], max_iter=args["max_iter"])
 
 Minc2.save_nifti_volume(args["out"],out_vol, store=Float32, history=Minc2.format_history(ARGS))
