@@ -51,17 +51,21 @@ else
     out_vol = Minc2.empty_volume_like(in_vol)
 end
 
+xfm=Minc2.read_itk_transform(args["transform"])
 
 #tfm = Minc2.load_transforms(args["transform"])
 tfm = Minc2.inv(Minc2.AnyTransform[
-     Minc2.AffineTransform([-1.0 0.0 0.0;0 1.0 0;0 0 1.0],  [0. 0 0]),
-     Minc2.read_itk_transform(args["transform"]),
-     Minc2.AffineTransform([-1.0 0.0 0.0;0.0 1.0 0;0 0 1.0],[0. 0 0])
+    # Minc2.AffineTransform([-1.0 0.0 0.0;0   -1.0 0;0 0 1.0],   [0. 0 0]),
+    Minc2.AffineTransform([1.0 0.0 0.0;0.0 1.0 0;0 0 1.0], [0.0 0.0 1.0]),
+    xfm,
      ])
+
 #tfm=Minc2.AnyTransform[Minc2.AffineTransform()]
 
-@info "Input v2w" in_vol.v2w
-@info "Transform" tfm
+@info "Input v2w"  in_vol.v2w
+@info "Output v2w" out_vol.v2w
+
+@info "Transform" xfm
 
 
 Minc2.resample_volume!(out_vol, in_vol; tfm, order=args["order"], fill=args["fill"], ftol=args["ftol"], max_iter=args["max_iter"])

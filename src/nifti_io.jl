@@ -1,5 +1,6 @@
 using NIfTI
 using Rotations
+using StaticArrays
 
 function read_nifti_volume(fn::String; store::Type{T}=Float64) where {T}
     ni = niread(fn)
@@ -12,7 +13,15 @@ function read_nifti_volume(fn::String; store::Type{T}=Float64) where {T}
         in_vol=map(x->convert(store, x),ni.raw)
     end
 
-    v2w=Minc2.AffineTransform(Float64.(getaffine(ni)))
+    tfm = Float64.(getaffine(ni))
+
+    # need to flip x,y 
+    # to simulate behaviour of ITK
+    # see https://github.com/InsightSoftwareConsortium/ITK/blob/master/Modules/IO/NIFTI/src/itkNiftiImageIO.cxx#L2031
+    tfm[1:3,1:2] .= tfm[1:3,1:2] .* -1
+    tfm[1:2,4]   .= tfm[1:2,4]   .* -1
+
+    v2w=Minc2.AffineTransform( tfm )
 
     return Minc2.Volume3D(in_vol, v2w, fn)
 end
@@ -24,16 +33,21 @@ function save_nifti_volume(fn, vol::Volume3D; store::Type{T}=Float32,history=not
     else
         _history=vol.history*"\n"*history
     end
+    tfm = [vol.v2w.rot vol.v2w.shift; 0 0 0 1]
+    # flip 
+    tfm[1:3,1:2] .= tfm[1:3,1:2] .* -1 
+    tfm[1:2,4]   .= tfm[1:2,4]   .* -1
 
-    start, step, dir_cos = decompose(vol.v2w)
+    start, step, dir_cos = decompose(tfm)
     R_quat = Rotations.params(QuatRotation(dir_cos))
 
     ni=NIVolume(map(x->convert(store, x),vol.vol),
         qfac=1.0f0,
-        quatern_b= R_quat[2],  quatern_c=R_quat[3], quatern_d=R_quat[4],
-        qoffset_x= start[1,1], qoffset_y=start[1,2],qoffset_z=start[1,3],
+        quatern_b=  R_quat[2],  quatern_c=R_quat[3],  quatern_d=R_quat[4],
+        qoffset_x= start[1,1], qoffset_y=start[1,2], qoffset_z=start[1,3],
         voxel_size=Tuple(Float32(i) for i in step),
-        xyzt_units=Int8(2),regular=Int8('r'))
+        xyzt_units=Int8(2),
+        regular=Int8('r'))
     
     #setaffine(ni.header, [vol.v2w.rot vol.v2w.shift;0 0 0 1])
     # TODO: deal with vectors (?)
@@ -89,7 +103,7 @@ function read_itk_transform(fn::String)
         # ignoring fixed parameters
         @assert tfm_dims=="3_3"
         @assert length(parameters) == 12
-        return Minc2.AffineTransform(reshape(parameters[1:9],3,3)',parameters[10:12])
+        return Minc2.AffineTransform(reshape(parameters[1:9],3,3),parameters[10:12])
     else
         throw( Minc2Error("Unsupported transform type \"$tfm_type\""))
     end

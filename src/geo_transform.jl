@@ -153,7 +153,8 @@ end
 """
 Apply affine transform
 """
-@inline function transform_point(tfm::AffineTransform{T}, 
+@inline function transform_point(
+        tfm::AffineTransform{T}, 
         p::SVector{3,T};
         _whatever...)::SVector{3,T} where {T}
     
@@ -161,7 +162,8 @@ Apply affine transform
 end
 
 
-@inline function interpolate_field(v2w::AffineTransform{T},
+@inline function interpolate_field(
+        v2w::AffineTransform{T},
         itp_vector_field::I, p::SVector{3,T})::SVector{3,T} where {T,I}
     # convert to voxel coords, add 1 to get index
     v = transform_point(v2w, p) .+ 1.0
@@ -173,7 +175,8 @@ end
 """
 Apply forward grid transform
 """
-@inline function transform_point(tfm::GridTransform{T,F}, p::SVector{3,T};
+@inline function transform_point(
+        tfm::GridTransform{T,F}, p::SVector{3,T};
         _whatever...)::SVector{3,T} where {T,F}
     return p + interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, p)
 end
@@ -182,8 +185,9 @@ end
 Apply inverse grid transform
 reimplements algorithm from MNI_formats/grid_transforms.c:grid_inverse_transform_point
 """
-@inline function transform_point(tfm::InverseGridTransform{T,F}, p::SVector{3,T};
-        max_iter::Int=10,ftol::Float64=1.0/80)::SVector{3,T}  where {T,F}
+@inline function transform_point(
+        tfm::InverseGridTransform{T,F}, p::SVector{3,T};
+        max_iter::Int=10, ftol::Float64=1.0/80)::SVector{3,T}  where {T,F}
     
     best::SVector{3,T} = estimate::SVector{3,T} = p - interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, p)
     err::SVector{3,T} = p - (estimate + interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, estimate))
@@ -225,7 +229,9 @@ end
 """
 Apply affine transform to CartesianIndices
 """
-@inline function transform_point(tfm::AffineTransform{T}, p::CartesianIndex{3};
+@inline function transform_point(
+        tfm::AffineTransform{T}, 
+        p::CartesianIndex{3};
         _whatever...)::SVector{3,T} where {T}
     ( SVector{3,T}(p[1]-1.0, p[2]-1.0, p[3]-1.0)' * tfm.rot)' + tfm.shift
 end
@@ -235,16 +241,24 @@ end
 Decompose affine transform into three components
 start, step, direction cosines
 """
-function decompose(tfm::AffineTransform{T}) where {T}
-    f = svd(tfm.rot)
+function decompose(rot,shift) 
+    f = svd(rot)
 
     # remove scaling
     dir_cos = f.U * f.Vt
 
-    step  = diag(tfm.rot         * Base.inv(dir_cos))
-    start = transpose(tfm.shift) * Base.inv(dir_cos)
+    step  = diag(rot         * Base.inv(dir_cos))
+    start = transpose(shift) * Base.inv(dir_cos)
     
     return start, step, dir_cos
+end
+
+function decompose(tfm::AffineTransform{T}) where {T}
+    decompose(tfm.rot,tfm.shift)
+end
+
+function decompose(tfm::Matrix{T}) where {T}
+    decompose(tfm[1:3,1:3],tfm[1:3,4])
 end
 
 
