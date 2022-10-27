@@ -55,13 +55,31 @@ function save_nifti_volume(fn, vol::Volume3D; store::Type{T}=Float32,history=not
 end
 
 
-function read_ants_warp(fn::String)
-    V=read_nifti_volume(fn; store=Float64)
-    # need to reshape to confirm to the MINC convention 
-    return V # TODO: finish this
+function read_itk_nifti_transform(fn::String)
+    V = read_nifti_volume(fn; store=Float64)
+    @assert ndims(V.vol)==5
+    @assert size(V.vol,5)==3
+    #reshape into minc convention
+    return Minc2.GridTransform{Float64,Float64}(V.v2w,permutedims(dropdims(V.vol,dims=4),(4,1,2,3)))
 end
 
-function read_itk_transform(fn::String)
+
+"""
+Read .txt and .nii(.nii.gz) transforms produces by ANTs
+"""
+function read_ants_transform(fn::String)
+    if endswith(fn,".txt")
+        return read_itk_txt_transform(fn)
+    elseif endswith(fn,".nii") || endswith(fn,".nii.gz")
+        return read_itk_nifti_transform(fn)
+    else
+        @warn "Not sure about this transform: " fn
+        return read_itk_nifti_transform(fn)
+    end
+end
+
+
+function read_itk_txt_transform(fn::String)
     # replicating https://github.com/InsightSoftwareConsortium/ITK/blob/master/Modules/IO/TransformInsightLegacy/src/itkTxtTransformIO.cxx
     _delimiters=[' ', '\t', '\n','\r']
     parameters=Float64[]
@@ -87,10 +105,10 @@ function read_itk_transform(fn::String)
             # not supported for now
         elseif tag_name == "Parameters"
             # read transform paramters
-            parameters = parse.(Float64,split(tag_val," ",keepempty=false))
+            parameters = parse.(Float64, split(tag_val," ",keepempty=false))
         elseif tag_name == "FixedParameters"
             # read transform fixed parameters
-            fixed_parameters = parse.(Float64,split(tag_val," ",keepempty=false))
+            fixed_parameters = parse.(Float64, split(tag_val," ",keepempty=false))
         else
             # something we don't know about, ignore ?
             @warn "Uknown tag" tag_name
@@ -103,7 +121,17 @@ function read_itk_transform(fn::String)
         # ignoring fixed parameters
         @assert tfm_dims=="3_3"
         @assert length(parameters) == 12
-        return Minc2.AffineTransform(reshape(parameters[1:9],3,3),parameters[10:12])
+        @assert length(fixed_parameters) == 3
+        rot_matrix=reshape(parameters[1:9],3,3)
+        translation  = parameters[10:12]
+        center = fixed_parameters
+
+        # need to convert to rot_matrix and offset
+        # as defined in 
+        # https://github.com/InsightSoftwareConsortium/ITK/blob/master/Modules/Core/Transform/include/itkMatrixOffsetTransformBase.hxx#L552
+        offset = center + translation - (center' * rot_matrix)'
+
+        return Minc2.AffineTransform(rot_matrix, offset)
     else
         throw( Minc2Error("Unsupported transform type \"$tfm_type\""))
     end

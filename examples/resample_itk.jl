@@ -14,8 +14,9 @@ function parse_commandline()
             required = true
         "transform"
             help = "Transform"
-            required = true
-        "out"
+            required = false
+            nargs = '*'
+        "--out"
             help = "Output minc file"
             required = true
         "--like"
@@ -51,23 +52,17 @@ else
     out_vol = Minc2.empty_volume_like(in_vol)
 end
 
-xfm=Minc2.read_itk_transform(args["transform"])
+@info args["transform"]
 
-#tfm = Minc2.load_transforms(args["transform"])
-tfm = Minc2.inv(Minc2.AnyTransform[
-    # Minc2.AffineTransform([-1.0 0.0 0.0;0   -1.0 0;0 0 1.0],   [0. 0 0]),
-    #Minc2.AffineTransform([1.0 0.0 0.0;0.0 1.0 0;0 0 1.0], [0.0 0.0 1.0]),
-    xfm,
-     ])
-
-#tfm=Minc2.AnyTransform[Minc2.AffineTransform()]
+itfm = Minc2.read_ants_transform.(args["transform"])
 
 @info "Input v2w"  in_vol.v2w
 @info "Output v2w" out_vol.v2w
 
-@info "Transform" xfm
+@info "Transform" itfm
 
 
-Minc2.resample_volume!(out_vol, in_vol; tfm, order=args["order"], fill=args["fill"], ftol=args["ftol"], max_iter=args["max_iter"])
+Minc2.resample_volume!(out_vol, in_vol; itfm, order=args["order"], 
+    fill=args["fill"], ftol=args["ftol"], max_iter=args["max_iter"])
 
 Minc2.save_nifti_volume(args["out"],out_vol, store=Float32, history=Minc2.format_history(ARGS))

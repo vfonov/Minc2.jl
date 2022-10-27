@@ -71,10 +71,10 @@ struct GridTransform{T,F} <: AnyTransform
     end
 end
 
-function GridTransform() where {T,F}
+function GridTransform(::Type{T}=Float64,::Type{F}=Float64) where {T,F}
     GridTransform{T,F}(
-        AffineTransform{T}(),
-        zeros{F}(3,3,3,3)
+        AffineTransform(T),
+        zeros(F,3,3,3,3)
     )
 end
 
@@ -97,10 +97,10 @@ struct InverseGridTransform{T,F} <: AnyTransform
     end
 end
 
-function InverseGridTransform() where {T,F}
+function InverseGridTransform(::Type{T}=Float64,::Type{F}=Float64) where {T,F}
     InverseGridTransform{T,F}(
-        AffineTransform{T}(),
-        zeros{F}(3,3,3,3)
+        AffineTransform(T),
+        zeros(F,3,3,3,3)
     )
 end
 
@@ -146,8 +146,8 @@ end
 """
 Invert concatenated transform
 """
-function inv(t::Vector{T})::Vector{T} where T<:AnyTransform
-    [inv(i) for i in reverse(t)]
+function inv(t::Vector{T})::Vector{AnyTransform} where T<:AnyTransform
+    AnyTransform[inv(i) for i in reverse(t)]
 end
 
 """
