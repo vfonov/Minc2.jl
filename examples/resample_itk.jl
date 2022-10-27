@@ -56,7 +56,7 @@ xfm=Minc2.read_itk_transform(args["transform"])
 #tfm = Minc2.load_transforms(args["transform"])
 tfm = Minc2.inv(Minc2.AnyTransform[
     # Minc2.AffineTransform([-1.0 0.0 0.0;0   -1.0 0;0 0 1.0],   [0. 0 0]),
-    Minc2.AffineTransform([1.0 0.0 0.0;0.0 1.0 0;0 0 1.0], [0.0 0.0 1.0]),
+    #Minc2.AffineTransform([1.0 0.0 0.0;0.0 1.0 0;0 0 1.0], [0.0 0.0 1.0]),
     xfm,
      ])
 

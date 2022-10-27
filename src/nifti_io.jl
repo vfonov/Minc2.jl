@@ -18,8 +18,8 @@ function read_nifti_volume(fn::String; store::Type{T}=Float64) where {T}
     # need to flip x,y 
     # to simulate behaviour of ITK
     # see https://github.com/InsightSoftwareConsortium/ITK/blob/master/Modules/IO/NIFTI/src/itkNiftiImageIO.cxx#L2031
-    tfm[1:3,1:2] .= tfm[1:3,1:2] .* -1
-    tfm[1:2,4]   .= tfm[1:2,4]   .* -1
+    tfm[1:3,1:2] .= tfm[1:3,1:2] .* -1.0
+    tfm[1:2,4]   .= tfm[1:2,4]   .* -1.0
 
     v2w=Minc2.AffineTransform( tfm )
 
@@ -35,8 +35,8 @@ function save_nifti_volume(fn, vol::Volume3D; store::Type{T}=Float32,history=not
     end
     tfm = [vol.v2w.rot vol.v2w.shift; 0 0 0 1]
     # flip 
-    tfm[1:3,1:2] .= tfm[1:3,1:2] .* -1 
-    tfm[1:2,4]   .= tfm[1:2,4]   .* -1
+    tfm[1:3,1:2] .= tfm[1:3,1:2] .* -1.0
+    tfm[1:2,4]   .= tfm[1:2,4]   .* -1.0
 
     start, step, dir_cos = decompose(tfm)
     R_quat = Rotations.params(QuatRotation(dir_cos))
