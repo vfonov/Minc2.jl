@@ -2,17 +2,10 @@ using NIfTI
 using Rotations
 using StaticArrays
 
-function read_nifti_volume(fn::String; store::Type{T}=Float64) where {T}
+function read_nifti_volume(fn::AbstractString; store::Type{T}=Float64)::Minc2.Volume3D where {T}
     ni = niread(fn)
 
     #convert volume to a simple volume and afine matrix to the v2w 
-    # check if the scaling is making sense
-    if !(ni.header.scl_slope==0.0f0 && ni.header.scl_inter==0.0f0)
-        in_vol=map(x->convert(store, x),ni)
-    else # we can't trust scaling
-        in_vol=map(x->convert(store, x),ni.raw)
-    end
-
     tfm = Float64.(getaffine(ni))
 
     # need to flip x,y 
@@ -23,11 +16,13 @@ function read_nifti_volume(fn::String; store::Type{T}=Float64) where {T}
 
     v2w=Minc2.AffineTransform( tfm )
 
-    return Minc2.Volume3D(in_vol, v2w, fn)
+    return Minc2.Volume3D( !(ni.header.scl_slope==0.0f0 && ni.header.scl_inter==0.0f0) ? convert.(store, ni) :
+                             convert.(store, ni.raw) , 
+                             v2w, fn)
 end
 
 
-function save_nifti_volume(fn, vol::Volume3D; store::Type{T}=Float32,history=nothing) where {T}
+function save_nifti_volume(fn::AbstractString, vol::Volume3D; store::Type{T}=Float32,history=nothing) where {T}
     if isnothing(history)
         _history=vol.history
     else
@@ -55,8 +50,9 @@ function save_nifti_volume(fn, vol::Volume3D; store::Type{T}=Float32,history=not
 end
 
 
-function read_itk_nifti_transform(fn::String)
+function read_itk_nifti_transform(fn::AbstractString)::Minc2.GridTransform{Float64,Float64}
     V = read_nifti_volume(fn; store=Float64)
+    
     @assert ndims(V.vol)==5
     @assert size(V.vol,5)==3
     #reshape into minc convention
@@ -67,7 +63,7 @@ end
 """
 Read .txt and .nii(.nii.gz) transforms produces by ANTs
 """
-function read_ants_transform(fn::String)
+function read_ants_transform(fn::AbstractString)
     if endswith(fn,".txt")
         return read_itk_txt_transform(fn)
     elseif endswith(fn,".nii") || endswith(fn,".nii.gz")
@@ -79,7 +75,7 @@ function read_ants_transform(fn::String)
 end
 
 
-function read_itk_txt_transform(fn::String)
+function read_itk_txt_transform(fn::AbstractString)::Minc2.AffineTransform{Float64}
     # replicating https://github.com/InsightSoftwareConsortium/ITK/blob/master/Modules/IO/TransformInsightLegacy/src/itkTxtTransformIO.cxx
     _delimiters=[' ', '\t', '\n','\r']
     parameters=Float64[]

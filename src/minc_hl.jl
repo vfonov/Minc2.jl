@@ -12,6 +12,10 @@ struct Volume3D
     history # file metadata: history
 end
 
+function Volume3D(vol, like::Volume3D; history=nothing)
+    return Volume3D(vol, like.v2w,isnothing(history) ? like.history : history)
+end
+
 function read_volume(fn::String; store::Type{T}=Float64) where {T}
     in_vol,in_hdr,in_store_hdr,in_history = Minc2.read_minc_volume_std_history(fn, store)
     v2w=Minc2.voxel_to_world(in_hdr)
@@ -20,17 +24,17 @@ function read_volume(fn::String; store::Type{T}=Float64) where {T}
 end
 
 
-function empty_volume_like(fn::String; store::Type{T}=Float64) where {T}
-    out_vol,out_hdr,out_store_hdr,history = Minc2.empty_like_minc_volume_std_history(fn,store)
+function empty_volume_like(fn::String; store::Type{T}=Float64, history=nothing) where {T}
+    out_vol,out_hdr, out_store_hdr, ref_history = Minc2.empty_like_minc_volume_std_history(fn,store)
     v2w=Minc2.voxel_to_world(out_hdr)
 
-    return Volume3D(out_vol,v2w,history)
+    return Volume3D(out_vol,v2w,isnothing(history) ? ref_history : history)
 end
 
 
-function empty_volume_like(vol::Volume3D; store::Type{T}=Float64) where {T}
+function empty_volume_like(vol::Volume3D; store::Type{T}=Float64, history=nothing) where {T}
     out_vol = Array{Float64}(undef, size(vol.vol)...)
-    return Volume3D(out_vol,vol.v2w,vol.history)
+    return Volume3D(out_vol, vol.v2w, isnothing(history) ? vol.history : history )
 end
 
 
@@ -129,14 +133,14 @@ end
   
 # convert transforms into a single nonlinear grid transform
 function normalize_tfm(tfm, ref)
-    out_grid = similar(ref.vol)
-    v2w = ref.v2w
+    out_grid = similar(ref.vector_field)
+    v2w = ref.voxel_to_world
   
     @simd for c in CartesianIndices(view(out_grid,1,:,:,:))
       orig = Minc2.transform_point(v2w, c )
       dst  = Minc2.transform_point(tfm, orig)
   
-      out_grid[:,c] .= dst .- orig
+      @inbounds out_grid[:,c] .= dst .- orig
     end
   
     return Minc2.GridTransform{Float64,Float64}(v2w, out_grid)

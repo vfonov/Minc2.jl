@@ -124,7 +124,7 @@ end
 """
 Open minc file, return handle
 """
-function open_minc_file(fname::String)
+function open_minc_file(fname::String)::VolumeHandle
     h = VolumeHandle()
     @minc2_check minc2_simple.minc2_open(h.x[], fname)
     return h
@@ -185,7 +185,7 @@ end
 """
 Query number of dimensions in the minc file
 """
-function ndim(h::VolumeHandle)
+function ndim(h::VolumeHandle)::Int
     dd = Ref{Int}(0)
     @minc2_check minc2_simple.minc2_ndim( h.x[], dd )
     return dd[]
@@ -201,7 +201,7 @@ end
 """
 internal function
 """
-function _hdr_convert!(hdr,dd)
+function _hdr_convert!(hdr::MincHeader,dd)::MincHeader
     for i = 1:length(hdr.start)
         hdr.dims[i] = dd[][i].length
         hdr.start[i] = dd[][i].start
