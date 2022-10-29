@@ -12,8 +12,13 @@ struct Volume3D
     history # file metadata: history
 end
 
+function Volume3D(vol, v2w::AffineTransform{T}; history=nothing) where {T}
+    return Volume3D(vol, v2w, history)
+end
+
+
 function Volume3D(vol, like::Volume3D; history=nothing)
-    return Volume3D(vol, like.v2w,isnothing(history) ? like.history : history)
+    return Volume3D(vol, like.v2w, isnothing(history) ? like.history : history)
 end
 
 function read_volume(fn::String; store::Type{T}=Float64) where {T}
@@ -128,7 +133,7 @@ function resample_grid(in_grid, itfm; ref=nothing)
             @inbounds out_vol[i,c] = in_vol_itp(i, dst_v...)
         end
     end
-    return Volume3D(vol=out_vol, v2w=v2w)
+    return Minc2.Volume3D(out_vol, v2w)
 end
   
 # convert transforms into a single nonlinear grid transform
