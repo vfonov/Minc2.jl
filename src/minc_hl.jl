@@ -137,7 +137,7 @@ function resample_grid(in_grid, itfm; ref=nothing)
 end
   
 # convert transforms into a single nonlinear grid transform
-function normalize_tfm(tfm, ref)
+function normalize_tfm(tfm, ref; store::Type{T}=Float64) where {T}
     out_grid = similar(ref.vector_field)
     v2w = ref.voxel_to_world
   
@@ -148,7 +148,7 @@ function normalize_tfm(tfm, ref)
       @inbounds out_grid[:,c] .= dst .- orig
     end
   
-    return Minc2.GridTransform{Float64,Float64}(v2w, out_grid)
+    return Minc2.GridTransform{Float64,T}(v2w, out_grid)
 end
 
 
