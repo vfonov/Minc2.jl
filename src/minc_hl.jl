@@ -138,7 +138,7 @@ end
   
 # convert transforms into a single nonlinear grid transform
 function normalize_tfm(tfm, ref; store::Type{T}=Float64) where {T}
-    out_grid = similar(ref.vector_field)
+    out_grid = similar(ref.vector_field,store)
     v2w = ref.voxel_to_world
   
     @simd for c in CartesianIndices(view(out_grid,1,:,:,:))
