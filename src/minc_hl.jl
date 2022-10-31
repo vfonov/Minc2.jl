@@ -65,7 +65,7 @@ function resample_volume!(in_vol::Array{T,3},
     interp::I=BSpline(Quadratic(Line(OnCell()))),
     fill=0.0,
     ftol=1.0/80,
-    max_iter=10) where {C,T,I, XFM<:Minc2.AnyTransform}
+    max_iter=10) where {C, T, I, XFM<:Minc2.AnyTransform}
 
     in_vol_itp = extrapolate( interpolate( in_vol, interp),fill)
 
@@ -81,18 +81,17 @@ function resample_volume!(in_vol::Array{T,3},
 end
 
 
-
 # TODO merge with next
 function resample_grid_volume!(
-    in_vol::Array{T,4}, 
-    out_vol::Array{T,4}, 
+    in_vol::Array{T,4},
+    out_vol::Array{T,4},
     v2w::Minc2.AffineTransform{C}, 
     w2v::Minc2.AffineTransform{C}, 
-    itfm::GeoTransforms;
+    itfm::Vector{XFM};
     interp::I=BSpline(Quadratic(Line(OnCell()))),
     fill=0.0,
     ftol=1.0/80,
-    max_iter=10) where {C,T,I}
+    max_iter=10) where {C, T, I, XFM<:Minc2.AnyTransform}
 
     # NEED to interpolate only over spatial dimensions
     in_vol_itp = extrapolate( interpolate( in_vol, (NoInterp(),interp,interp,interp)),fill)
@@ -124,10 +123,12 @@ function resample_grid(in_grid, itfm; ref=nothing)::Minc2.Volume3D
 end
   
 # convert transforms into a single nonlinear grid transform
-function normalize_tfm(tfm, ref; store::Type{T}=Float64)::Minc2.GridTransform{Float64,T} where {T}
+function normalize_tfm(tfm::Vector{XFM},
+        ref::G; 
+        store::Type{T}=Float64)::Minc2.GridTransform{Float64,T} where {T, XFM<:Minc2.AnyTransform, G<:Minc2.GridTransform}
     out_grid = similar(ref.vector_field, store)
     v2w = ref.voxel_to_world
-  
+
     @simd for c in CartesianIndices(size(out_grid)[2:end])
       orig = Minc2.transform_point(v2w, c )
       dst  = Minc2.transform_point(tfm, orig)
