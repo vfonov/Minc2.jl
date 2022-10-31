@@ -66,14 +66,14 @@ end
 """
 Read .txt and .nii(.nii.gz) transforms produces by ANTs
 """
-function read_ants_transform(fn::AbstractString;store::Type{T}=Float32)::Minc2.AnyTransform
+function read_ants_transform(fn::AbstractString;store::Type{T}=Float32)::Minc2.AnyTransform where {T}
     if endswith(fn,".txt")
         return read_itk_txt_transform(fn)
     elseif endswith(fn,".nii") || endswith(fn,".nii.gz")
         return read_itk_nifti_transform(fn;store)
     else
         @warn "Not sure about this transform: " fn
-        return read_itk_nifti_transform(fn)
+        return read_itk_nifti_transform(fn;store)
     end
 end
 
