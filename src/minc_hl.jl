@@ -111,7 +111,7 @@ end
 
 
 # TODO: add function to apply local jacobian?
-function resample_grid(in_grid, itfm; ref=nothing)
+function resample_grid(in_grid, itfm; ref=nothing)::Minc2.Volume3D
     if isnothing(ref)
       out_vol = similar(in_grid.vol)
       v2w = in_grid.v2w
@@ -119,20 +119,7 @@ function resample_grid(in_grid, itfm; ref=nothing)
       out_vol = similar(ref.vol)
       v2w = ref.v2w
     end
-  
-    interp = BSpline(Linear())
-    in_vol_itp = extrapolate( interpolate( in_grid.vol, (NoInterp(), interp, interp, interp)), 0.0)
-    w2v=Minc2.inv(v2w)
-  
-    @simd for c in CartesianIndices(view(out_vol,1,:,:,:))
-        orig = Minc2.transform_point(v2w, c )
-        dst  = Minc2.transform_point(itfm, orig)
-        dst_v= Minc2.transform_point(w2v, dst ) .+ 1.0
-        
-        for i in eachindex(view(out_vol,:,1,1,1))
-            @inbounds out_vol[i,c] = in_vol_itp(i, dst_v...)
-        end
-    end
+    resample_grid_volume!(in_grid.vol, out_vol, in_grid.v2w, Minc2.inv(v2w), itfm; interp=BSpline(Linear()))
     return Minc2.Volume3D(out_vol, v2w)
 end
   
