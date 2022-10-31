@@ -16,18 +16,19 @@ function read_nifti_volume(fn::AbstractString; store::Type{T}=Float64)::Minc2.Vo
 
     v2w=Minc2.AffineTransform( tfm )
 
-    return Minc2.Volume3D( !(ni.header.scl_slope==0.0f0 && ni.header.scl_inter==0.0f0) ? convert.(store, ni) :
-                             convert.(store, ni.raw) , 
-                             v2w, fn)
+    return Minc2.Volume3D( !(ni.header.scl_slope==0.0f0 && ni.header.scl_inter==0.0f0) ? 
+                             convert.(store, ni) : convert.(store, ni.raw) , 
+                          v2w, fn)
 end
 
 
-function save_nifti_volume(fn::AbstractString, vol::Volume3D; store::Type{T}=Float32,history=nothing) where {T}
+function save_nifti_volume(fn::AbstractString, vol::Volume3D; store::Type{T}=Float32, history=nothing) where {T}
     if isnothing(history)
         _history=vol.history
     else
         _history=vol.history*"\n"*history
     end
+
     tfm = [vol.v2w.rot vol.v2w.shift; 0 0 0 1]
     # flip 
     tfm[1:3,1:2] .= tfm[1:3,1:2] .* -1.0
@@ -36,7 +37,7 @@ function save_nifti_volume(fn::AbstractString, vol::Volume3D; store::Type{T}=Flo
     start, step, dir_cos = decompose(tfm)
     R_quat = Rotations.params(QuatRotation(dir_cos))
 
-    ni=NIVolume(map(x->convert(store, x),vol.vol),
+    ni=NIVolume( convert.(store, vol.vol),
         qfac=1.0f0,
         quatern_b=  R_quat[2],  quatern_c=R_quat[3],  quatern_d=R_quat[4],
         qoffset_x= start[1,1], qoffset_y=start[1,2], qoffset_z=start[1,3],
@@ -49,25 +50,27 @@ function save_nifti_volume(fn::AbstractString, vol::Volume3D; store::Type{T}=Flo
     niwrite(fn,ni)
 end
 
-
-function read_itk_nifti_transform(fn::AbstractString)::Minc2.GridTransform{Float64,Float64}
-    V = read_nifti_volume(fn; store=Float64)
+"""
+Read ANTs style warp transform
+"""
+function read_itk_nifti_transform(fn::AbstractString;store::Type{T}=Float32)::Minc2.GridTransform{Float64,T} where {T}
+    V = read_nifti_volume(fn; store)
     
-    @assert ndims(V.vol)==5
-    @assert size(V.vol,5)==3
+    @assert ndims(V.vol)  == 5
+    @assert size(V.vol,5) == 3
     #reshape into minc convention
-    return Minc2.GridTransform{Float64,Float64}(V.v2w,permutedims(dropdims(V.vol,dims=4),(4,1,2,3)))
+    return Minc2.GridTransform{Float64,T}(V.v2w, permutedims(dropdims(V.vol,dims=4),(4,1,2,3)))
 end
 
 
 """
 Read .txt and .nii(.nii.gz) transforms produces by ANTs
 """
-function read_ants_transform(fn::AbstractString)
+function read_ants_transform(fn::AbstractString;store::Type{T}=Float32)::Minc2.AnyTransform
     if endswith(fn,".txt")
         return read_itk_txt_transform(fn)
     elseif endswith(fn,".nii") || endswith(fn,".nii.gz")
-        return read_itk_nifti_transform(fn)
+        return read_itk_nifti_transform(fn;store)
     else
         @warn "Not sure about this transform: " fn
         return read_itk_nifti_transform(fn)

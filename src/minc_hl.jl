@@ -137,11 +137,11 @@ function resample_grid(in_grid, itfm; ref=nothing)
 end
   
 # convert transforms into a single nonlinear grid transform
-function normalize_tfm(tfm, ref; store::Type{T}=Float64) where {T}
-    out_grid = similar(ref.vector_field,store)
+function normalize_tfm(tfm, ref; store::Type{T}=Float64)::Minc2.GridTransform{Float64,T} where {T}
+    out_grid = similar(ref.vector_field, store)
     v2w = ref.voxel_to_world
   
-    @simd for c in CartesianIndices(view(out_grid,1,:,:,:))
+    @simd for c in CartesianIndices(size(out_grid)[2:end])
       orig = Minc2.transform_point(v2w, c )
       dst  = Minc2.transform_point(tfm, orig)
   

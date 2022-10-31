@@ -64,9 +64,9 @@ struct GridTransform{T,F} <: AnyTransform
 
     function GridTransform{T,F}(voxel_to_world::AffineTransform{T},
         vector_field::Array{F, 4}) where {T,F} 
-        new(voxel_to_world,inv(voxel_to_world),vector_field,
+        new(voxel_to_world, inv(voxel_to_world), vector_field,
             extrapolate(interpolate(vector_field, 
-                    (NoInterp(),BSpline(Linear()),BSpline(Linear()),BSpline(Linear()))),
+                    (NoInterp(), BSpline(Linear()), BSpline(Linear()), BSpline(Linear()))),
                 Flat()))
     end
 end
