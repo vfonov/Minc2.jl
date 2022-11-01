@@ -125,7 +125,7 @@ end
 function tfm_to_grid!(tfm::Vector{XFM}, grid::G,
         v2w::Minc2.AffineTransform{C}) where {T,C, XFM<:Minc2.AnyTransform, G<:AbstractArray}
 
-    @simd for c in CartesianIndices(size(out_grid)[2:end])
+    @simd for c in CartesianIndices(size(grid)[2:end])
         orig = Minc2.transform_point(v2w, c )
         dst  = Minc2.transform_point(tfm, orig)
         @inbounds grid[:,c] .= dst .- orig
