@@ -122,9 +122,11 @@ function resample_grid(in_grid, itfm; ref=nothing)::Minc2.Volume3D
     return Minc2.Volume3D(out_vol, v2w)
 end
 
-function tfm_to_grid!(tfm::Vector{XFM}, grid::G,
+function tfm_to_grid!(
+        tfm::Vector{XFM}, 
+        grid::G,
         v2w::Minc2.AffineTransform{C}) where {T,C, XFM<:Minc2.AnyTransform, G<:AbstractArray}
-
+    
     @simd for c in CartesianIndices(size(grid)[2:end])
         orig = Minc2.transform_point(v2w, c )
         dst  = Minc2.transform_point(tfm, orig)
@@ -140,7 +142,7 @@ function tfm_to_grid(tfm::Vector{XFM},
     v2w = ref.voxel_to_world
 
     tfm_to_grid!(tfm,out_grid,v2w)
-    return Minc2.Volume3D(v2w, out_grid)
+    return Minc2.Volume3D( out_grid, v2w)
 end
 
 # convert transforms into a single nonlinear grid transform
