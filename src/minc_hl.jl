@@ -121,21 +121,43 @@ function resample_grid(in_grid, itfm; ref=nothing)::Minc2.Volume3D
     resample_grid_volume!(in_grid.vol, out_vol, in_grid.v2w, Minc2.inv(v2w), itfm; interp=BSpline(Linear()))
     return Minc2.Volume3D(out_vol, v2w)
 end
-  
+
+function tfm_to_grid!(tfm::Vector{XFM}, grid::G,
+        v2w::Minc2.AffineTransform{C}) where {T,C, XFM<:Minc2.AnyTransform, G<:AbstractArray}
+
+    @simd for c in CartesianIndices(size(out_grid)[2:end])
+        orig = Minc2.transform_point(v2w, c )
+        dst  = Minc2.transform_point(tfm, orig)
+        @inbounds grid[:,c] .= dst .- orig
+    end
+end
+
+# convert transforms into a single nonlinear grid
+function tfm_to_grid(tfm::Vector{XFM},
+        ref::G; 
+        store::Type{T}=Float64)::Minc2.Volume3D where {T, XFM<:Minc2.AnyTransform, G<:Minc2.GridTransform}
+    out_grid = similar(ref.vector_field, store)
+    v2w = ref.voxel_to_world
+
+    tfm_to_grid!(tfm,out_grid,v2w)
+    return Minc2.Volume3D(v2w, out_grid)
+end
+
 # convert transforms into a single nonlinear grid transform
 function normalize_tfm(tfm::Vector{XFM},
-        ref::G; 
-        store::Type{T}=Float64)::Minc2.GridTransform{Float64,T} where {T, XFM<:Minc2.AnyTransform, G<:Minc2.GridTransform}
+    ref::G; 
+    store::Type{T}=Float64)::Minc2.GridTransform{Float64,T} where {T, XFM<:Minc2.AnyTransform, G<:Minc2.GridTransform}
+
     out_grid = similar(ref.vector_field, store)
     v2w = ref.voxel_to_world
 
     @simd for c in CartesianIndices(size(out_grid)[2:end])
-      orig = Minc2.transform_point(v2w, c )
-      dst  = Minc2.transform_point(tfm, orig)
-  
-      @inbounds out_grid[:,c] .= dst .- orig
+        orig = Minc2.transform_point(v2w, c )
+        dst  = Minc2.transform_point(tfm, orig)
+
+        @inbounds out_grid[:,c] .= dst .- orig
     end
-  
+
     return Minc2.GridTransform{Float64,T}(v2w, out_grid)
 end
 
