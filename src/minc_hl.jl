@@ -110,13 +110,13 @@ end
 
 
 # TODO: add function to apply local jacobian?
-function resample_grid(in_grid, itfm; ref=nothing)::Minc2.Volume3D
-    if isnothing(ref)
+function resample_grid(in_grid, itfm; like=nothing)::Minc2.Volume3D
+    if isnothing(like)
       out_vol = similar(in_grid.vol)
       v2w = in_grid.v2w
     else
-      out_vol = similar(ref.vol)
-      v2w = ref.v2w
+      out_vol = similar(like.vol)
+      v2w = like.v2w
     end
     resample_grid_volume!(in_grid.vol, out_vol, in_grid.v2w, Minc2.inv(v2w), itfm; interp=BSpline(Linear()))
     return Minc2.Volume3D(out_vol, v2w)
