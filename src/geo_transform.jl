@@ -114,7 +114,7 @@ GeoTransforms=Vector{AnyTransform}
 
 
 """
-Invert AffineTransform transform
+Invert IdentityTransform transform
 """
 function inv(t::IdentityTransform)::IdentityTransform
     IdentityTransform()
@@ -136,7 +136,7 @@ function inv(t::GridTransform{T,F})::InverseGridTransform{T,F} where {T,F}
 end
 
 """
-Invert GridTransform transform
+Invert InverseGridTransform transform
 """
 function inv(t::InverseGridTransform{T,F})::GridTransform{T,F} where {T,F}
     GridTransform{T,F}(t.voxel_to_world, t.vector_field)

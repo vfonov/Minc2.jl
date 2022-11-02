@@ -61,7 +61,7 @@ function resample_volume!(in_vol::Array{T,3},
     out_vol::Array{T,3}, 
     v2w::Minc2.AffineTransform{C}, 
     w2v::Minc2.AffineTransform{C}, 
-    itfm::Vector{XFM};
+    itfm::Union{Vector{XFM},XFM};
     interp::I=BSpline(Quadratic(Line(OnCell()))),
     fill=0.0,
     ftol=1.0/80,
@@ -87,7 +87,7 @@ function resample_grid_volume!(
     out_vol::Array{T,4},
     v2w::Minc2.AffineTransform{C}, 
     w2v::Minc2.AffineTransform{C}, 
-    itfm::Vector{XFM};
+    itfm::Union{Vector{XFM}, XFM};
     interp::I=BSpline(Quadratic(Line(OnCell()))),
     fill=0.0,
     ftol=1.0/80,
@@ -118,7 +118,8 @@ function resample_grid(in_grid, itfm; like=nothing)::Minc2.Volume3D
       out_vol = similar(like.vol)
       v2w = like.v2w
     end
-    resample_grid_volume!(in_grid.vol, out_vol, in_grid.v2w, Minc2.inv(v2w), itfm; interp=BSpline(Linear()))
+    resample_grid_volume!(in_grid.vol, out_vol, in_grid.v2w, Minc2.inv(v2w), itfm; 
+        interp=BSpline(Linear()))
     return Minc2.Volume3D(out_vol, v2w)
 end
 
@@ -175,7 +176,7 @@ function resample_volume!(in_vol::Volume3D, out_vol::Volume3D;
     if !isnothing(tfm) && isnothing(itfm)
         itfm=Minc2.inv(tfm)
     elseif isnothing(itfm) && isnothing(tfm)
-        itfm=GeoTransforms() # identity transform
+        itfm=Minc2.IdentityTransform() # identity transform
     end
 
     if isnothing(interp)
@@ -233,7 +234,7 @@ function resample_grid_volume!(
     if !isnothing(tfm) && isnothing(itfm)
         itfm=Minc2.inv(tfm)
     elseif isnothing(itfm) && isnothing(tfm)
-        itfm=GeoTransforms() # identity transform
+        itfm=Minc2.IdentityTransform() # identity transform
     end
 
     if isnothing(interp)
@@ -259,7 +260,8 @@ function resample_grid_volume!(
         fill=zero(eltype(out_vol.vol))
     end
 
-    resample_grid_volume!(in_vol.vol, out_vol.vol,in_vol.v2w, Minc2.inv(out_vol.v2w), itfm; interp,ftol, max_iter)
+    resample_grid_volume!(in_vol.vol, out_vol.vol,in_vol.v2w, Minc2.inv(out_vol.v2w), itfm; 
+        interp, ftol, max_iter)
 end
 
 function calculate_jacobian!(
@@ -297,7 +299,8 @@ function calculate_jacobian!(
     out_vol
 end
 
-function calculate_jacobian!(out_vol::Volume3D, tfm::GeoTransforms; interp=BSpline(Quadratic(Line(OnCell()))),
+function calculate_jacobian!(out_vol::Volume3D, tfm::GeoTransforms; 
+    interp=BSpline(Quadratic(Line(OnCell()))),
     fill=0.0,
     ftol=1.0/80,
     max_iter=10)
