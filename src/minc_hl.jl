@@ -47,7 +47,7 @@ function save_volume(fn, vol::Volume3D; store::Type{T}=Float32,history=nothing) 
     if isnothing(history)
         _history=vol.history
     else
-        _history=vol.history*"\n"*history
+        _history=(isnothing(vol.history) ? "" : vol.history * "\n" )*history
     end
 
     Minc2.write_minc_volume_std(fn, store, 
@@ -163,9 +163,8 @@ function normalize_tfm(tfm::Vector{XFM},
     return Minc2.GridTransform{Float64,T}(v2w, out_grid)
 end
 
-
 #TODO: make this more generic , and make it work with labels 
-function resample_volume!(out_vol::Volume3D, in_vol::Volume3D; 
+function resample_volume!(in_vol::Volume3D, out_vol::Volume3D; 
     tfm=nothing, itfm=nothing, interp=nothing, fill=nothing, 
     order=nothing,ftol=1.0/80,
     max_iter=10)
@@ -203,7 +202,22 @@ function resample_volume!(out_vol::Volume3D, in_vol::Volume3D;
     end
 
     #TODO: extend this to grid support 
-    resample_volume!(in_vol.vol, out_vol.vol,in_vol.v2w, Minc2.inv(out_vol.v2w), itfm; interp,ftol, max_iter)
+    resample_volume!(in_vol.vol, out_vol.vol, out_vol.v2w, Minc2.inv(in_vol.v2w), itfm; 
+        interp,ftol, max_iter)
+
+    return out_vol
+end
+
+
+function resample_volume(in_vol::Volume3D;like=nothing,
+    tfm=nothing, itfm=nothing, interp=nothing, fill=nothing, 
+    order=nothing,ftol=1.0/80, store=nothing,
+    max_iter=10)
+
+    out_vol=Minc2.empty_volume_like(isnothing(like) ? in_vol : like ;
+        store = isnothing(store) ? (isnothing(like) ? eltype(in_vol.vol) : eltype(like.vol) ) : store)
+
+    return resample_volume!(in_vol,out_vol;tfm,itfm,interp,fill,order,ftol,max_iter)
 end
 
 #TODO: make this more generic , and make it work with label 

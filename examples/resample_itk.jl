@@ -1,8 +1,5 @@
 using Minc2 # for reading MINC2 files
-using Interpolations
 using ArgParse
-using StaticArrays
-
 
 
 function parse_commandline()
@@ -52,14 +49,14 @@ else
     out_vol = Minc2.empty_volume_like(in_vol)
 end
 
-@info args["transform"]
+#@info args["transform"]
 
 itfm = Minc2.read_ants_transform.(args["transform"])
 
-@info "Input v2w"  in_vol.v2w
-@info "Output v2w" out_vol.v2w
+#@info "Input v2w"  in_vol.v2w
+#@info "Output v2w" out_vol.v2w
 
-@info "Transform" itfm
+#@info "Transform" itfm
 
 
 Minc2.resample_volume!(out_vol, in_vol; itfm, order=args["order"], 

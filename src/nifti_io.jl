@@ -6,7 +6,7 @@ function read_nifti_volume(fn::AbstractString; store::Type{T}=Float64)::Minc2.Vo
     ni = niread(fn)
 
     #convert volume to a simple volume and afine matrix to the v2w 
-    tfm = Float64.(getaffine(ni))
+    tfm = Float64.(getaffine(ni.header))
 
     # need to flip x,y 
     # to simulate behaviour of ITK
@@ -14,10 +14,11 @@ function read_nifti_volume(fn::AbstractString; store::Type{T}=Float64)::Minc2.Vo
     tfm[1:3,1:2] .= tfm[1:3,1:2] .* -1.0
     tfm[1:2,4]   .= tfm[1:2,4]   .* -1.0
 
-    v2w=Minc2.AffineTransform( tfm )
+    v2w = Minc2.AffineTransform( tfm )
 
-    return Minc2.Volume3D( !(ni.header.scl_slope==0.0f0 && ni.header.scl_inter==0.0f0) ? 
-                             convert.(store, ni) : convert.(store, ni.raw) , 
+    return Minc2.Volume3D( ! ((ni.header.scl_slope == 0.0f0 && ni.header.scl_inter == 0.0f0) ||
+                              (ni.header.scl_slope == 1.0f0 && ni.header.scl_inter == 0.0f0) ) ? 
+                               convert(AbstractArray{T}, ni) : convert(AbstractArray{T}, ni.raw) , 
                           v2w, fn)
 end
 

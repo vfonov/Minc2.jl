@@ -1,8 +1,5 @@
 using Minc2 # for reading MINC2 files
-using Interpolations
 using ArgParse
-using StaticArrays
-
 
 
 function parse_commandline()
@@ -12,9 +9,8 @@ function parse_commandline()
         "in"
             help = "Input minc file"
             required = true
-        "transform"
+        "--transform"
             help = "Transform"
-            required = true
         "out"
             help = "Output minc file"
             required = true
@@ -47,7 +43,7 @@ args = parse_commandline()
 in_vol=Minc2.read_volume(args["in"],store=Float64)
 
 if !isnothing(args["like"])
-    out_vol = Minc2.empty_volume_like(args["like"],Float64)
+    out_vol = Minc2.empty_volume_like(args["like"], store=Float64)
 else
     # out_vol = Array{Float64}(undef, size(in_vol)...)
     # out_hdr = in_hdr
@@ -55,12 +51,17 @@ else
     out_vol = Minc2.empty_volume_like(in_vol)
 end
 
-tfm=Minc2.load_transforms(args["transform"])
+if !isnothing(args["transform"])
+    tfm=Minc2.load_transforms(args["transform"])
+else
+    tfm=nothing
+end
 
-@info tfm
+@info "Transform:" tfm
 
-Minc2.resample_volume!(out_vol,in_vol;tfm,order=args["order"],fill=args["fill"],ftol=args["ftol"],max_iter=args["max_iter"])
+Minc2.resample_volume!(out_vol,in_vol;tfm,order=args["order"],
+    fill=args["fill"],ftol=args["ftol"],max_iter=args["max_iter"])
 
 
 #Minc2.write_minc_volume_std(args["out"], UInt16, out_store_hdr, out_vol)
-Minc2.save_volume(args["out"],out_vol,store=UInt16,history=Minc2.format_history(ARGS))
+Minc2.save_volume(args["out"],out_vol,store=UInt16, history=Minc2.format_history(ARGS))

@@ -252,7 +252,7 @@ end
 Allocate empty volume using handle
 return volume, storage header
 """
-function empty_like_minc_volume_raw(h::VolumeHandle, ::Type{T}=Float32 ) where {T}
+function empty_like_minc_volume_raw(h::VolumeHandle, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader} where {T}
     # TODO: use ImageMetadata to store header contents?
     store_hdr = store_header( h )
     volume = Array{T}(undef, store_hdr.dims...)
@@ -266,7 +266,7 @@ end
 Read the actual volume using handle
 return volume, storage header
 """
-function read_minc_volume_raw(h::VolumeHandle, ::Type{T}=Float32 ) where {T}
+function read_minc_volume_raw(h::VolumeHandle, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader} where {T}
 
     volume,store_hdr = empty_like_minc_volume_raw(h,T)
     @minc2_check minc2_simple.minc2_load_complete_volume(h.x[], Base.unsafe_convert(Ptr{Cvoid},volume), julia_to_minc2[Type{T}] )
@@ -279,7 +279,7 @@ end
 Read the actual volume using handle
 return volume, representation header,storage header
 """
-function empty_like_minc_volume_std(h::VolumeHandle, ::Type{T}=Float32 ) where {T}
+function empty_like_minc_volume_std(h::VolumeHandle, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader} where {T}
     # TODO: use ImageMetadata to store header contents?
     setup_standard_order( h )
     store_hdr = store_header( h )
@@ -294,7 +294,7 @@ end
 Read the actual volume using handle
 return volume, representation header,storage header
 """
-function read_minc_volume_std(h::VolumeHandle, ::Type{T}=Float32 ) where {T}
+function read_minc_volume_std(h::VolumeHandle, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader} where {T}
     # TODO: use ImageMetadata to store header contents?
     volume, hdr, store_hdr = empty_like_minc_volume_std(h,T)
 
@@ -304,10 +304,10 @@ end
 
 
 """
-allocate empty volume using path
+allocate empty volume using path as a reference
 return volume, representation header,storage header
 """
-function empty_like_minc_volume_std(path::String, ::Type{T}=Float32 ) where {T}
+function empty_like_minc_volume_std(path::String, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader} where {T}
     handle = open_minc_file(path)
     volume, hdr, store_hdr = empty_like_minc_volume_std(handle,T)
     close_minc_file(handle)
@@ -333,7 +333,7 @@ end
 Read the actual volume using path
 return volume, representation header,storage header
 """
-function read_minc_volume_std(path::String, ::Type{T}=Float32 ) where {T}
+function read_minc_volume_std(path::String, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader} where {T}
     handle = open_minc_file(path)
     volume, hdr, store_hdr = read_minc_volume_std(handle,T)
     close_minc_file(handle)
@@ -358,10 +358,10 @@ end
 
 
 """
-Read the actual volume using path
+Create empty volume similar to existing file
 return volume, representation header,storage header
 """
-function empty_like_minc_volume_raw(path::String, ::Type{T}=Float32 ) where {T}
+function empty_like_minc_volume_raw(path::String, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader} where {T}
     handle = open_minc_file(path)
     volume, store_hdr = empty_like_minc_volume_raw(handle,T)
     close_minc_file(handle)
@@ -374,7 +374,7 @@ end
 Read the actual volume using path
 return volume, representation header,storage header
 """
-function read_minc_volume_raw(path::String, ::Type{T}=Float32 ) where {T}
+function read_minc_volume_raw(path::String, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader} where {T}
     handle = open_minc_file(path)
     volume, store_hdr = read_minc_volume_raw(handle,T)
     close_minc_file(handle)
@@ -433,7 +433,7 @@ Read minc2 header attribute
 """
 function read_attribute(h::VolumeHandle, 
     group::String,
-    attribute::String)::Union{String,AbstractVector,Nothing}
+    attribute::String)::Union{String, AbstractVector, Nothing}
 
     attr_type  = Ref{Int}(0)
     attr_length = Ref{Int}(0)
@@ -501,7 +501,7 @@ end
 Convenience function for reading specific attribute, return default value if not found
 also convert Array into the first value if it's a one-length array
 """
-function get_attribute(h::VolumeHandle,g::String,a::String;default=missing)
+function get_attribute(h::VolumeHandle,g::String,a::String; default=missing)
     # ::Union{String,Missing,...}
     r=default
     if g in groups(h)
@@ -583,7 +583,7 @@ end
 return history string
 """
 function read_history(i::VolumeHandle)::Union{String, Nothing}
-    return read_attribute(i,"","history")
+    return get_attribute(i, "", "history", default=nothing)
 end
 
 """
