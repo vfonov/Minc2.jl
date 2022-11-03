@@ -171,7 +171,7 @@ function normalize_tfm(tfm::Union{Vector{XFM}, XFM},
 
     tfm_to_grid!(tfm,out_grid,v2w)
 
-    return GridTransform{Float64,T}(v2w, out_grid)
+    return GridTransform(v2w, out_grid)
 end
 
 
