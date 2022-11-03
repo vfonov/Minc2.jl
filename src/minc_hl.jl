@@ -16,7 +16,7 @@ end
 Create Volume3D
 """
 function Volume3D(vol::Array{T,N}, v2w::AffineTransform{Float64}; 
-        history::AbstractString=nothing)::Volume3D{T,N} where {T,N}
+        history::Union{AbstractString,Nothing}=nothing)::Volume3D{T,N} where {T,N}
     return Volume3D(vol, v2w, history)
 end
 
@@ -24,7 +24,8 @@ end
 """
 Create Volume3D
 """
-function Volume3D(vol::Array{T,N}, like::Volume3D; history=nothing)::Volume3D{T,N}  where {T,N}
+function Volume3D(vol::Array{T,N}, like::Volume3D; 
+        history::Union{AbstractString,Nothing}=nothing)::Volume3D{T,N}  where {T,N}
     return Volume3D(vol, like.v2w, isnothing(history) ? like.history : history)
 end
 
