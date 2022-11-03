@@ -2,7 +2,7 @@ using NIfTI
 using Rotations
 using StaticArrays
 
-function read_nifti_volume(fn::AbstractString; store::Type{T}=Float64)::Minc2.Volume3D where {T}
+function read_nifti_volume(fn::AbstractString; store::Type{T}=Float64)::Volume3D{T} where {T}
     ni = niread(fn)
 
     #convert volume to a simple volume and afine matrix to the v2w 
@@ -23,7 +23,8 @@ function read_nifti_volume(fn::AbstractString; store::Type{T}=Float64)::Minc2.Vo
 end
 
 
-function save_nifti_volume(fn::AbstractString, vol::Volume3D; store::Type{T}=Float32, history=nothing) where {T}
+function save_nifti_volume(fn::AbstractString, vol::Volume3D{T}; 
+        store::Type{S}=Float32, history=nothing) where {T,S}
     if isnothing(history)
         _history=vol.history
     else
@@ -38,7 +39,7 @@ function save_nifti_volume(fn::AbstractString, vol::Volume3D; store::Type{T}=Flo
     start, step, dir_cos = decompose(tfm)
     R_quat = Rotations.params(QuatRotation(dir_cos))
 
-    ni=NIVolume( convert.(store, vol.vol),
+    ni=NIVolume( convert(AbstractArray{S}, vol.vol),
         qfac=1.0f0,
         quatern_b=  R_quat[2],  quatern_c=R_quat[3],  quatern_d=R_quat[4],
         qoffset_x= start[1,1], qoffset_y=start[1,2], qoffset_z=start[1,3],
@@ -67,7 +68,7 @@ end
 """
 Read .txt and .nii(.nii.gz) transforms produces by ANTs
 """
-function read_ants_transform(fn::AbstractString;store::Type{T}=Float32)::Minc2.AnyTransform where {T}
+function read_ants_transform(fn::AbstractString; store::Type{T}=Float32)::Minc2.AnyTransform where {T}
     if endswith(fn,".txt")
         return read_itk_txt_transform(fn)
     elseif endswith(fn,".nii") || endswith(fn,".nii.gz")

@@ -171,7 +171,7 @@ end
 """
 Create empty minc file on disk, structure need to be defined in advance
 """
-function create_minc_file(h::VolumeHandle, path::String)
+function create_minc_file(h::VolumeHandle, path::AbstractString)
     @minc2_check minc2_simple.minc2_create(h.x[], path )
 end
 
@@ -252,7 +252,8 @@ end
 Allocate empty volume using handle
 return volume, storage header
 """
-function empty_like_minc_volume_raw(h::VolumeHandle, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader} where {T}
+function empty_like_minc_volume_raw(h::VolumeHandle, 
+        ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader} where {T}
     # TODO: use ImageMetadata to store header contents?
     store_hdr = store_header( h )
     volume = Array{T}(undef, store_hdr.dims...)
@@ -266,7 +267,8 @@ end
 Read the actual volume using handle
 return volume, storage header
 """
-function read_minc_volume_raw(h::VolumeHandle, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader} where {T}
+function read_minc_volume_raw(h::VolumeHandle, 
+        ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader} where {T}
 
     volume,store_hdr = empty_like_minc_volume_raw(h,T)
     @minc2_check minc2_simple.minc2_load_complete_volume(h.x[], Base.unsafe_convert(Ptr{Cvoid},volume), julia_to_minc2[Type{T}] )
@@ -279,7 +281,8 @@ end
 Read the actual volume using handle
 return volume, representation header,storage header
 """
-function empty_like_minc_volume_std(h::VolumeHandle, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader} where {T}
+function empty_like_minc_volume_std(h::VolumeHandle, 
+    ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader} where {T}
     # TODO: use ImageMetadata to store header contents?
     setup_standard_order( h )
     store_hdr = store_header( h )
@@ -294,7 +297,8 @@ end
 Read the actual volume using handle
 return volume, representation header,storage header
 """
-function read_minc_volume_std(h::VolumeHandle, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader} where {T}
+function read_minc_volume_std(h::VolumeHandle, 
+        ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader} where {T}
     # TODO: use ImageMetadata to store header contents?
     volume, hdr, store_hdr = empty_like_minc_volume_std(h,T)
 
@@ -307,7 +311,8 @@ end
 allocate empty volume using path as a reference
 return volume, representation header,storage header
 """
-function empty_like_minc_volume_std(path::String, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader} where {T}
+function empty_like_minc_volume_std(path::String, 
+    ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader} where {T}
     handle = open_minc_file(path)
     volume, hdr, store_hdr = empty_like_minc_volume_std(handle,T)
     close_minc_file(handle)
@@ -333,7 +338,8 @@ end
 Read the actual volume using path
 return volume, representation header,storage header
 """
-function read_minc_volume_std(path::String, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader} where {T}
+function read_minc_volume_std(path::String, ::Type{T}=Float32 )::
+        Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader} where {T}
     handle = open_minc_file(path)
     volume, hdr, store_hdr = read_minc_volume_std(handle,T)
     close_minc_file(handle)
@@ -346,7 +352,8 @@ end
 Read the actual volume using path
 return volume, representation header,storage header
 """
-function read_minc_volume_std_history(path::String, ::Type{T}=Float32 ) where {T}
+function read_minc_volume_std_history(path::String, ::Type{T}=Float32 )::
+    Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader, Union{String,Nothing}} where {T} 
     handle = open_minc_file(path)
     volume, hdr, store_hdr = read_minc_volume_std(handle,T)
     history = read_history(handle)

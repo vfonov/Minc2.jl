@@ -4,75 +4,197 @@ using Interpolations
 using Dates
 
 """
-An abstract 3D volume
+An abstract 3D volume, could be vector field or time dimension
 """
-struct Volume3D
-    vol # an abstract volume
-    v2w # transformation from voxel to world coordinates
-    history # file metadata: history
+struct Volume3D{T,N}
+    vol::Array{T,N} # an abstract volume
+    v2w::AffineTransform{Float64} # transformation from voxel to world coordinates
+    history::Union{String,Nothing} # file metadata: history
 end
 
-function Volume3D(vol, v2w::AffineTransform{T}; history=nothing) where {T}
+"""
+Create Volume3D
+"""
+function Volume3D(vol::Array{T,N}, v2w::AffineTransform{Float64}; 
+        history::AbstractString=nothing)::Volume3D{T,N} where {T,N}
     return Volume3D(vol, v2w, history)
 end
 
 
-function Volume3D(vol, like::Volume3D; history=nothing)
+"""
+Create Volume3D
+"""
+function Volume3D(vol::Array{T,N}, like::Volume3D; history=nothing)::Volume3D{T,N}  where {T,N}
     return Volume3D(vol, like.v2w, isnothing(history) ? like.history : history)
 end
 
-function read_volume(fn::String; store::Type{T}=Float64) where {T}
-    in_vol,in_hdr,in_store_hdr,in_history = Minc2.read_minc_volume_std_history(fn, store)
-    v2w=Minc2.voxel_to_world(in_hdr)
+"""
+Read Volume3D from minc file
+"""
+function read_volume(fn::String; store::Type{T}=Float64)::Volume3D{T} where {T}
+    in_vol,in_hdr,in_store_hdr,in_history = read_minc_volume_std_history(fn, store)
+    v2w=voxel_to_world(in_hdr)
 
-    return Volume3D(in_vol,v2w,in_history)
+    return Volume3D(in_vol, v2w, in_history)
 end
 
 
-function empty_volume_like(fn::String; store::Type{T}=Float64, history=nothing) where {T}
-    out_vol,out_hdr, out_store_hdr, ref_history = Minc2.empty_like_minc_volume_std_history(fn,store)
-    v2w=Minc2.voxel_to_world(out_hdr)
+"""
+Create an empty Volume3D
+"""
+function empty_volume_like(
+    fn::String; 
+    store::Type{T}=Float64, history=nothing)::Volume3D{T} where {T}
+    out_vol,out_hdr, out_store_hdr, ref_history = empty_like_minc_volume_std_history(fn,store)
+    v2w=voxel_to_world(out_hdr)
 
-    return Volume3D(out_vol,v2w,isnothing(history) ? ref_history : history)
+    return Volume3D(out_vol, v2w, isnothing(history) ? ref_history : history)
 end
 
 
-function empty_volume_like(vol::Volume3D; store::Type{T}=Float64, history=nothing) where {T}
+"""
+Create an empty Volume3D
+"""
+function empty_volume_like(vol::Volume3D{T1,N}; store::Type{T}=Float64, history=nothing) where {T1,T,N}
     out_vol = Array{Float64}(undef, size(vol.vol)...)
     return Volume3D(out_vol, vol.v2w, isnothing(history) ? vol.history : history )
 end
 
-
-function save_volume(fn, vol::Volume3D; store::Type{T}=Float32,history=nothing) where {T}
+"""
+Save Volume3D to minc file
+"""
+function save_volume(fn, vol::Volume3D{T,N}; store::Type{S}=Float32,history=nothing) where {S,T,N}
     if isnothing(history)
         _history=vol.history
     else
         _history=(isnothing(vol.history) ? "" : vol.history * "\n" )*history
     end
 
-    Minc2.write_minc_volume_std(fn, store, 
-      Minc2.create_header_from_v2w(size(vol.vol), vol.v2w, 
+    write_minc_volume_std(fn, store, 
+      create_header_from_v2w(size(vol.vol), vol.v2w, 
       vector_dim=(length(size(vol.vol))==4)), vol.vol; history=_history)
 end
 
 
 
+"""
+Resample 4D array using transformation , assume 1st dimension is non spatial
+"""
+function resample_grid_volume!(
+    in_vol::Array{T,4},
+    out_vol::Array{T,4},
+    v2w::AffineTransform{C}, 
+    w2v::AffineTransform{C}, 
+    itfm::Union{Vector{XFM}, XFM};
+    interp::I=BSpline(Quadratic(Line(OnCell()))),
+    fill::T=0.0,
+    ftol=1.0/80,
+    max_iter=10)::Array{T,4} where {C, T, I, XFM<:AnyTransform}
+
+    # NEED to interpolate only over spatial dimensions
+    in_vol_itp = extrapolate( interpolate( in_vol, (NoInterp(), interp, interp, interp)), fill)
+
+    @simd for c in CartesianIndices(size(out_vol)[2:end])
+        orig = transform_point(v2w, c )
+        dst  = transform_point(itfm, orig; ftol, max_iter )
+        dst_v= transform_point(w2v, dst ) .+ 1.0
+
+        for i in eachindex(size(out_vol)[1])
+            @inbounds out_vol[i,c] = in_vol_itp(i, dst_v...)
+        end
+    end
+    out_vol
+end
+
+"""
+Resample Volume3D that contain 4D array,
+using transformation , assume 1st dimension is non spatial
+"""
+function resample_grid(
+    in_grid::Volume3D{T,4}, 
+    itfm::Union{Vector{XFM}, XFM}; 
+    like::Union{Nothing,Volume3D{L,4}}=nothing)::Volume3D{T,4} where {T,L, XFM<:AnyTransform}
+
+    if isnothing(like)
+      out_vol = similar(in_grid.vol)
+      v2w = in_grid.v2w
+    else
+      out_vol = similar(like.vol)
+      v2w = like.v2w
+    end
+    resample_grid_volume!(in_grid.vol, out_vol, in_grid.v2w, inv(v2w), itfm; 
+        interp=BSpline(Linear()))
+    return Volume3D(out_vol, v2w)
+end
+
+"""
+Convert arbitrary transformation 
+into 4D array
+"""
+function tfm_to_grid!(
+        tfm::Union{Vector{XFM}, XFM}, 
+        grid::Array{T,4},
+        v2w::AffineTransform{C})::Array{T,4} where {T, C, XFM<:AnyTransform}
+    
+    @simd for c in CartesianIndices(size(grid)[2:end])
+        orig = transform_point(v2w, c )
+        dst  = transform_point(tfm, orig)
+        @inbounds grid[:,c] .= dst .- orig
+    end
+    return grid
+end
+
+"""
+Convert arbitrary transformation 
+into Volume3D with 4D array
+"""
+function tfm_to_grid(tfm::Union{Vector{XFM}, XFM},
+        ref::G;
+        store::Type{T}=Float64)::Volume3D{T,4} where {T, XFM<:AnyTransform, G<:GridTransform}
+    out_grid = similar(ref.vector_field, store)
+    v2w = ref.voxel_to_world
+
+    tfm_to_grid!(tfm,out_grid,v2w)
+    return Volume3D( out_grid, v2w)
+end
+
+"""
+Convert arbitrary transformation 
+into a single GridTransform
+"""
+function normalize_tfm(tfm::Union{Vector{XFM}, XFM},
+    ref::G;
+    store::Type{T}=Float64)::GridTransform{Float64,T} where {T, XFM<:AnyTransform, G<:GridTransform}
+
+    out_grid = similar(ref.vector_field, store)
+    v2w = ref.voxel_to_world
+
+    tfm_to_grid!(tfm,out_grid,v2w)
+
+    return GridTransform{Float64,T}(v2w, out_grid)
+end
+
+
+
+"""
+Resample 3D array using transformation 
+"""
 function resample_volume!(in_vol::Array{T,3}, 
     out_vol::Array{T,3}, 
-    v2w::Minc2.AffineTransform{C}, 
-    w2v::Minc2.AffineTransform{C}, 
+    v2w::AffineTransform{C}, 
+    w2v::AffineTransform{C}, 
     itfm::Union{Vector{XFM},XFM};
     interp::I=BSpline(Quadratic(Line(OnCell()))),
-    fill=0.0,
+    fill::T=zero(T),
     ftol=1.0/80,
-    max_iter=10) where {C, T, I, XFM<:Minc2.AnyTransform}
+    max_iter=10) where {C, T, I, XFM<:AnyTransform}
 
     in_vol_itp = extrapolate( interpolate( in_vol, interp),fill)
 
     @simd for c in CartesianIndices(out_vol)
-        orig = Minc2.transform_point(v2w, c )
-        dst  = Minc2.transform_point(itfm, orig; ftol, max_iter )
-        dst_v= Minc2.transform_point(w2v, dst ) .+ 1.0
+        orig = transform_point(v2w, c )
+        dst  = transform_point(itfm, orig; ftol, max_iter )
+        dst_v= transform_point(w2v, dst ) .+ 1.0
 
         @inbounds out_vol[c] = in_vol_itp( dst_v... )
         #out_vol[c] = sqrt(sum((orig - dst).^2))
@@ -81,106 +203,34 @@ function resample_volume!(in_vol::Array{T,3},
 end
 
 
-# TODO merge with next
-function resample_grid_volume!(
-    in_vol::Array{T,4},
-    out_vol::Array{T,4},
-    v2w::Minc2.AffineTransform{C}, 
-    w2v::Minc2.AffineTransform{C}, 
-    itfm::Union{Vector{XFM}, XFM};
-    interp::I=BSpline(Quadratic(Line(OnCell()))),
-    fill=0.0,
+"""
+Resample Volume3D using transformation 
+"""
+function resample_volume!(
+    in_vol::Volume3D{T,3}, 
+    out_vol::Volume3D{O,3}; 
+    tfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
+    itfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
+    interp::I=nothing, 
+    fill=nothing, 
+    order=nothing,
     ftol=1.0/80,
-    max_iter=10) where {C, T, I, XFM<:Minc2.AnyTransform}
-
-    # NEED to interpolate only over spatial dimensions
-    in_vol_itp = extrapolate( interpolate( in_vol, (NoInterp(),interp,interp,interp)),fill)
-
-    @simd for c in CartesianIndices(view(out_vol,1,:,:,:))
-        orig = Minc2.transform_point(v2w, c )
-        dst  = Minc2.transform_point(itfm, orig; ftol, max_iter )
-        dst_v= Minc2.transform_point(w2v, dst ) .+ 1.0
-
-        for i in eachindex(view(out_vol,:,1,1,1))
-            @inbounds out_vol[i,c] = in_vol_itp(i, dst_v...)
-        end
-    end
-    out_vol
-end
-
-
-# TODO: add function to apply local jacobian?
-function resample_grid(in_grid, itfm; like=nothing)::Minc2.Volume3D
-    if isnothing(like)
-      out_vol = similar(in_grid.vol)
-      v2w = in_grid.v2w
-    else
-      out_vol = similar(like.vol)
-      v2w = like.v2w
-    end
-    resample_grid_volume!(in_grid.vol, out_vol, in_grid.v2w, Minc2.inv(v2w), itfm; 
-        interp=BSpline(Linear()))
-    return Minc2.Volume3D(out_vol, v2w)
-end
-
-function tfm_to_grid!(
-        tfm::Vector{XFM}, 
-        grid::G,
-        v2w::Minc2.AffineTransform{C}) where {T,C, XFM<:Minc2.AnyTransform, G<:AbstractArray}
-    
-    @simd for c in CartesianIndices(size(grid)[2:end])
-        orig = Minc2.transform_point(v2w, c )
-        dst  = Minc2.transform_point(tfm, orig)
-        @inbounds grid[:,c] .= dst .- orig
-    end
-end
-
-# convert transforms into a single nonlinear grid
-function tfm_to_grid(tfm::Vector{XFM},
-        ref::G; 
-        store::Type{T}=Float64)::Minc2.Volume3D where {T, XFM<:Minc2.AnyTransform, G<:Minc2.GridTransform}
-    out_grid = similar(ref.vector_field, store)
-    v2w = ref.voxel_to_world
-
-    tfm_to_grid!(tfm,out_grid,v2w)
-    return Minc2.Volume3D( out_grid, v2w)
-end
-
-# convert transforms into a single nonlinear grid transform
-function normalize_tfm(tfm::Vector{XFM},
-    ref::G; 
-    store::Type{T}=Float64)::Minc2.GridTransform{Float64,T} where {T, XFM<:Minc2.AnyTransform, G<:Minc2.GridTransform}
-
-    out_grid = similar(ref.vector_field, store)
-    v2w = ref.voxel_to_world
-
-    @simd for c in CartesianIndices(size(out_grid)[2:end])
-        orig = Minc2.transform_point(v2w, c )
-        dst  = Minc2.transform_point(tfm, orig)
-
-        @inbounds out_grid[:,c] .= dst .- orig
-    end
-
-    return Minc2.GridTransform{Float64,T}(v2w, out_grid)
-end
-
-#TODO: make this more generic , and make it work with labels 
-function resample_volume!(in_vol::Volume3D, out_vol::Volume3D; 
-    tfm=nothing, itfm=nothing, interp=nothing, fill=nothing, 
-    order=nothing,ftol=1.0/80,
-    max_iter=10)
+    max_iter=10)::Volume3D{O,3} where {T,O,I,XFM<:AnyTransform}
 
     @assert ndims(out_vol.vol)==3
     @assert ndims(in_vol.vol)==3
 
     if !isnothing(tfm) && isnothing(itfm)
-        itfm=Minc2.inv(tfm)
+        itfm=inv(tfm)
     elseif isnothing(itfm) && isnothing(tfm)
-        itfm=Minc2.IdentityTransform() # identity transform
+        itfm=IdentityTransform() # identity transform
+    end
+    if isnothing(fill)
+        fill=zero(O)
     end
 
     if isnothing(interp)
-        if eltype(out_vol.vol) <: Integer # output is integer, use nearest neighbor
+        if O <: Integer # output is integer, use nearest neighbor
             interp=BSpline(Constant())
             if !isnothing(order)
                 @error "Unsupported order when interpolating integers" order
@@ -198,83 +248,46 @@ function resample_volume!(in_vol::Volume3D, out_vol::Volume3D;
         end
     end
 
-    if isnothing(fill)
-        fill=zero(eltype(out_vol.vol))
-    end
-
     #TODO: extend this to grid support 
-    resample_volume!(in_vol.vol, out_vol.vol, out_vol.v2w, Minc2.inv(in_vol.v2w), itfm; 
-        interp,ftol, max_iter)
+    resample_volume!(in_vol.vol, out_vol.vol, out_vol.v2w, inv(in_vol.v2w), itfm; 
+        interp, ftol, max_iter, fill)
 
     return out_vol
 end
 
-
-function resample_volume(in_vol::Volume3D;like=nothing,
-    tfm=nothing, itfm=nothing, interp=nothing, fill=nothing, 
-    order=nothing,ftol=1.0/80, store=nothing,
-    max_iter=10)
-
-    out_vol=Minc2.empty_volume_like(isnothing(like) ? in_vol : like ;
-        store = isnothing(store) ? (isnothing(like) ? eltype(in_vol.vol) : eltype(like.vol) ) : store)
-
-    return resample_volume!(in_vol,out_vol;tfm,itfm,interp,fill,order,ftol,max_iter)
-end
-
-#TODO: make this more generic , and make it work with label 
-function resample_grid_volume!(
-    out_vol::Volume3D, in_vol::Volume3D; 
-    tfm=nothing, itfm=nothing, interp=nothing, fill=nothing, 
-    order=nothing,ftol=1.0/80,
-    max_iter=10)
-
-    @assert ndims(out_vol.vol)==4
-    @assert ndims(in_vol.vol)==4
-
-    if !isnothing(tfm) && isnothing(itfm)
-        itfm=Minc2.inv(tfm)
-    elseif isnothing(itfm) && isnothing(tfm)
-        itfm=Minc2.IdentityTransform() # identity transform
-    end
-
-    if isnothing(interp)
-        if eltype(out_vol.vol) <: Integer # output is integer, use nearest neighbor
-            interp=BSpline(Constant())
-            if !isnothing(order)
-                @error "Unsupported order when interpolating integers" order
-            end
-        else 
-            if order==1
-                interp=BSpline(Linear())
-            elseif isnothing(order) || order==2  # default
-                interp=BSpline(Quadratic(Line(OnCell())))
-            elseif order==3
-                interp=BSpline(Cubic(Line(OnCell())))
-            else
-                @error "Unsupported order" order
-            end
-        end
-    end
-
-    if isnothing(fill)
-        fill=zero(eltype(out_vol.vol))
-    end
-
-    resample_grid_volume!(in_vol.vol, out_vol.vol,in_vol.v2w, Minc2.inv(out_vol.v2w), itfm; 
-        interp, ftol, max_iter)
-end
-
-function calculate_jacobian!(
-    out_vol::Array{T,3}, 
-    v2w::Minc2.AffineTransform{C},
-    tfm::GeoTransforms;
-    interp::I=BSpline(Quadratic(Line(OnCell()))),
-    fill=0.0,
+"""
+Resample Volume3D using transformation 
+"""
+function resample_volume(
+    in_vol::Volume3D{T,3};
+    like::Union{Volume3D{O,3},Nothing}=nothing,
+    tfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
+    itfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
+    interp::I=nothing, 
+    fill=nothing,
+    order=1,
     ftol=1.0/80,
-    max_iter=10) where {C,T,I}
+    max_iter=10)::Volume3D where {T, O, I,XFM<:AnyTransform}
+
+    out_vol = empty_volume_like( isnothing(like) ? in_vol : like ;
+        store = (isnothing(like) ? eltype(in_vol.vol) : eltype(like.vol) ) )
+
+    return resample_volume!(in_vol, out_vol; tfm, itfm, interp, fill, order, ftol, max_iter)
+end
+
+"""
+Calculate jacobian for an arbitrary transformation
+"""
+function calculate_jacobian!(
+    tfm::Union{Vector{XFM},XFM},
+    out_vol::Array{T,3},
+    out_v2w::AffineTransform{C};
+    interp::I=BSpline(Quadratic(Line(OnCell()))),
+    ftol=1.0/80,
+    max_iter=10) where {C,T,I,XFM<:AnyTransform}
 
     # calculate scaling matrix from the voxel to world matrix
-    _,step,_ = decompose(v2w)
+    _,step,_ = decompose(out_v2w)
     sc = diagm(step) #Base.inv(v2w.rot * Base.inv(dir_cos))
     #@info "Scaling matrix" sc
 
@@ -282,33 +295,42 @@ function calculate_jacobian!(
     vector_field = Array{T}(undef, 3, size(out_vol)...)
 
     @simd for c in CartesianIndices(out_vol)
-        orig = Minc2.transform_point(v2w, c )
-        dst  = Minc2.transform_point(tfm, orig; ftol, max_iter )
+        orig = transform_point(v2w, c )
+        dst  = transform_point(tfm, orig; ftol, max_iter )
 
         @inbounds vector_field[:,c] .= dst # .- orig
     end
 
     # Second step: calculate jacobian determinant 
-    vector_field_itp = extrapolate( interpolate( vector_field, (NoInterp(),interp,interp,interp)), Flat())
+    vector_field_itp = extrapolate( interpolate( vector_field, 
+        (NoInterp(),interp,interp,interp)), Flat())
 
     @simd for c in CartesianIndices(out_vol)
         grad = hcat([ Interpolations.gradient( vector_field_itp, i, Tuple(c)...) for i in 1:3 ]...)
-        out_vol[c] = det(grad'*sc)
+        @inbounds out_vol[c] = det(grad'*sc)
     end
 
-    out_vol
+    return out_vol
 end
 
-function calculate_jacobian!(out_vol::Volume3D, tfm::GeoTransforms; 
-    interp=BSpline(Quadratic(Line(OnCell()))),
-    fill=0.0,
+"""
+Calculate jacobian for an arbitrary transformation
+"""
+function calculate_jacobian!(
+    tfm::Union{Vector{XFM},XFM}, 
+    out_vol::Volume3D{T,3}; 
+    interp::I=BSpline(Quadratic(Line(OnCell()))),
     ftol=1.0/80,
-    max_iter=10)
-    calculate_jacobian!(out_vol.vol,out_vol.v2w,tfm;interp,fill,ftol,max_iter)
+    max_iter=10)::Volume3D{T,3} where {T,I,XFM<:AnyTransform}
+
+    calculate_jacobian!(tfm, out_vol.vol,out_vol.v2w;interp,ftol,max_iter) 
+    return out_vol
 end
 
-# generate minc-style history from program args
-function format_history(args)
+"""
+generate minc-style history from program args
+"""
+function format_history(args)::String
     #stamp=strftime("%a %b %d %T %Y>>>", gmtime())
     # Thu Jul 30 14:23:47 2009
     return Dates.format(now(),"e d u HH:MM:SS YYYY")*">>>"*join(args," ")

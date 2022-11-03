@@ -60,7 +60,11 @@ struct GridTransform{T,F} <: AnyTransform
     voxel_to_world::AffineTransform{T}
     world_to_voxel::AffineTransform{T}
     vector_field::Array{F, 4}
-    itp_vector_field
+    itp_vector_field::Interpolations.Extrapolation{F, 4, 
+        Interpolations.BSplineInterpolation{F, 4, Array{F, 4}, 
+        Tuple{NoInterp, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}}, NTuple{4, Base.OneTo{Int64}}}, Tuple{NoInterp, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}}, 
+        Flat{Nothing}}
+
 
     function GridTransform{T,F}(voxel_to_world::AffineTransform{T},
         vector_field::Array{F, 4}) where {T,F} 
@@ -85,8 +89,10 @@ struct InverseGridTransform{T,F} <: AnyTransform
     voxel_to_world::AffineTransform{T}
     world_to_voxel::AffineTransform{T}
     vector_field::Array{F, 4}
-
-    itp_vector_field
+    itp_vector_field::Interpolations.Extrapolation{F, 4, 
+        Interpolations.BSplineInterpolation{F, 4, Array{F, 4}, 
+        Tuple{NoInterp, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}}, NTuple{4, Base.OneTo{Int64}}}, Tuple{NoInterp, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}}, 
+        Flat{Nothing}}
 
     function InverseGridTransform{T,F}(voxel_to_world::AffineTransform{T},
         vector_field::Array{F, 4}) where {T,F}
@@ -158,18 +164,21 @@ Apply affine transform
         p::SVector{3,T};
         _whatever...)::SVector{3,T} where {T}
     
-    (p' * tfm.rot)' + tfm.shift
+    return (p' * tfm.rot)' + tfm.shift
 end
 
-
+"""
+Support function
+"""
 @inline function interpolate_field(
         v2w::AffineTransform{T},
-        itp_vector_field::I, p::SVector{3,T})::SVector{3,T} where {T,I}
+        itp_vector_field::I, 
+        p::SVector{3,T} )::SVector{3,T} where {T, I<:Interpolations.Extrapolation}
     # convert to voxel coords, add 1 to get index
-    v = transform_point(v2w, p) .+ 1.0
-    SVector{3,T}(itp_vector_field(1,v...),
-                 itp_vector_field(2,v...),
-                 itp_vector_field(3,v...) )
+    v::SVector{3,T} = transform_point(v2w, p) .+ 1.0
+    return SVector{3,T}(itp_vector_field(1,v...),
+                        itp_vector_field(2,v...),
+                        itp_vector_field(3,v...) )
 end
 
 """
@@ -217,12 +226,12 @@ Apply concatenated transform
 @inline function transform_point(
         tfm::Vector{XFM},
         p::SVector{3,T};
-        max_iter::Int=10,ftol::Float64=1.0/80)::SVector{3,T} where {XFM<:AnyTransform,T,F}
-    o=p
+        max_iter::Int=10,
+        ftol::Float64=1.0/80)::SVector{3,T} where {XFM<:AnyTransform,T}
     for t in tfm
-        o = transform_point(t,o;max_iter,ftol)
+        p = transform_point(t,p;max_iter,ftol)
     end
-    return o
+    return p
 end
 
 
