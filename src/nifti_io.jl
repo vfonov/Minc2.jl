@@ -61,7 +61,7 @@ function read_itk_nifti_transform(fn::AbstractString;store::Type{T}=Float32)::Mi
     @assert ndims(V.vol)  == 5
     @assert size(V.vol,5) == 3
     #reshape into minc convention
-    return Minc2.GridTransform{Float64,T}(V.v2w, permutedims(dropdims(V.vol,dims=4),(4,1,2,3)))
+    return Minc2.GridTransform(V.v2w, permutedims(dropdims(V.vol,dims=4),(4,1,2,3)))
 end
 
 
