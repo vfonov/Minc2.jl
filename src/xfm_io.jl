@@ -156,9 +156,9 @@ function load_transforms(h::TransformHandle)::Vector{AnyTransform}
             grid_vol, grid_hdr, grid_store_hdr = Minc2.read_minc_volume_std(grid_fname, Float64)
 
             if inv_grid
-                push!(r,InverseGridTransform{Float64, Float64}(voxel_to_world(grid_hdr), grid_vol))
+                push!(r,InverseGridTransform(voxel_to_world(grid_hdr), grid_vol))
             else
-                push!(r,       GridTransform{Float64, Float64}(voxel_to_world(grid_hdr), grid_vol))
+                push!(r,       GridTransform(voxel_to_world(grid_hdr), grid_vol))
             end
         else
             # unsupported type 

@@ -197,8 +197,8 @@ function resample_volume!(in_vol::Array{T,3},
         dst_v= transform_point(w2v, dst ) .+ 1.0
 
         @inbounds out_vol[c] = in_vol_itp( dst_v... )
-        #out_vol[c] = sqrt(sum((orig - dst).^2))
     end
+    
     return out_vol
 end
 
@@ -248,7 +248,6 @@ function resample_volume!(
         end
     end
 
-    #TODO: extend this to grid support 
     resample_volume!(in_vol.vol, out_vol.vol, out_vol.v2w, inv(in_vol.v2w), itfm; 
         interp, ftol, max_iter, fill)
 
@@ -267,7 +266,7 @@ function resample_volume(
     fill=nothing,
     order=1,
     ftol=1.0/80,
-    max_iter=10)::Volume3D where {T, O, I,XFM<:AnyTransform}
+    max_iter=10)::Volume3D where {T, O, I, XFM<:AnyTransform}
 
     out_vol = empty_volume_like( isnothing(like) ? in_vol : like ;
         store = (isnothing(like) ? eltype(in_vol.vol) : eltype(like.vol) ) )

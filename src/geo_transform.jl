@@ -14,6 +14,9 @@ Any 3D Geometrical transform
 """
 abstract type AnyTransform end
 
+
+Base.length(tr::AnyTransform)=1
+
 """
 Identity transform
 """
@@ -56,24 +59,27 @@ end
 """
 Dense vector field transform (grid transform)
 """
-struct GridTransform{T,F} <: AnyTransform
+struct GridTransform{T,F,I} <: AnyTransform
     voxel_to_world::AffineTransform{T}
     world_to_voxel::AffineTransform{T}
     vector_field::Array{F, 4}
-    itp_vector_field::Interpolations.Extrapolation{F, 4, 
-        Interpolations.BSplineInterpolation{F, 4, Array{F, 4}, 
-        Tuple{NoInterp, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}}, NTuple{4, Base.OneTo{Int64}}}, Tuple{NoInterp, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}}, 
-        Flat{Nothing}}
-
-
-    function GridTransform{T,F}(voxel_to_world::AffineTransform{T},
-        vector_field::Array{F, 4}) where {T,F} 
-        new(voxel_to_world, inv(voxel_to_world), vector_field,
-            extrapolate(interpolate(vector_field, 
-                    (NoInterp(), BSpline(Linear()), BSpline(Linear()), BSpline(Linear()))),
-                Flat()))
-    end
+    itp_vector_field::I
 end
+
+
+"""
+Constructor from voxel to world transform and a vector field
+"""
+function GridTransform(
+    voxel_to_world::AffineTransform{T},
+    vector_field::Array{F, 4}) where {T,F}
+
+    GridTransform(voxel_to_world, inv(voxel_to_world), vector_field,
+        extrapolate(interpolate(vector_field, 
+                (NoInterp(), BSpline(Linear()), BSpline(Linear()), BSpline(Linear()))),
+            Flat()))
+end
+
 
 function GridTransform(::Type{T}=Float64,::Type{F}=Float64) where {T,F}
     GridTransform{T,F}(
@@ -85,23 +91,28 @@ end
 """
 Dense vector field transform (grid transform) used in inverse
 """
-struct InverseGridTransform{T,F} <: AnyTransform
+struct InverseGridTransform{T,F,VF} <: AnyTransform
     voxel_to_world::AffineTransform{T}
     world_to_voxel::AffineTransform{T}
     vector_field::Array{F, 4}
-    itp_vector_field::Interpolations.Extrapolation{F, 4, 
-        Interpolations.BSplineInterpolation{F, 4, Array{F, 4}, 
-        Tuple{NoInterp, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}}, NTuple{4, Base.OneTo{Int64}}}, Tuple{NoInterp, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}, BSpline{Linear{Throw{OnGrid}}}}, 
-        Flat{Nothing}}
+    itp_vector_field::VF
 
-    function InverseGridTransform{T,F}(voxel_to_world::AffineTransform{T},
-        vector_field::Array{F, 4}) where {T,F}
-        new(voxel_to_world,inv(voxel_to_world),vector_field,
-            extrapolate(interpolate(vector_field, 
-                    (NoInterp(), BSpline(Linear()), BSpline(Linear()), BSpline(Linear()))),
-                Flat()))
-    end
 end
+
+
+"""
+Constructor from voxel to world transform
+and a vector field
+"""
+function InverseGridTransform(
+    voxel_to_world::AffineTransform{T},
+    vector_field::Array{F, 4}) where {T,F}
+    InverseGridTransform(voxel_to_world,inv(voxel_to_world),vector_field,
+        extrapolate(interpolate(vector_field, 
+                (NoInterp(), BSpline(Linear()), BSpline(Linear()), BSpline(Linear()))),
+            Flat()))
+end
+
 
 function InverseGridTransform(::Type{T}=Float64,::Type{F}=Float64) where {T,F}
     InverseGridTransform{T,F}(
@@ -114,15 +125,13 @@ end
 """
 AnyTransform
 """
-#AnyTransform{T,F} = Union{IdentityTransform, AffineTransform{T}, GridTransform{T,F}, InverseGridTransform{T,F}}
-
 GeoTransforms=Vector{AnyTransform}
 
 
 """
 Invert IdentityTransform transform
 """
-function inv(t::IdentityTransform)::IdentityTransform
+function inv(::IdentityTransform)::IdentityTransform
     IdentityTransform()
 end
 
@@ -137,15 +146,15 @@ end
 """
 Invert GridTransform transform
 """
-function inv(t::GridTransform{T,F})::InverseGridTransform{T,F} where {T,F}
-    InverseGridTransform{T,F}( t.voxel_to_world, t.vector_field)
+function inv(t::GridTransform{T,F,VF})::InverseGridTransform{T,F,VF} where {T,F,VF}
+    InverseGridTransform( t.voxel_to_world, t.vector_field)
 end
 
 """
 Invert InverseGridTransform transform
 """
-function inv(t::InverseGridTransform{T,F})::GridTransform{T,F} where {T,F}
-    GridTransform{T,F}(t.voxel_to_world, t.vector_field)
+function inv(t::InverseGridTransform{T,F,VF})::GridTransform{T,F,VF} where {T,F,VF}
+    GridTransform(t.voxel_to_world, t.vector_field)
 end
 
 
@@ -155,6 +164,7 @@ Invert concatenated transform
 function inv(t::Vector{T})::Vector{AnyTransform} where T<:AnyTransform
     AnyTransform[inv(i) for i in reverse(t)]
 end
+
 
 """
 Apply affine transform
@@ -207,7 +217,7 @@ reimplements algorithm from MNI_formats/grid_transforms.c:grid_inverse_transform
     while i<max_iter && smallest_err>ftol 
         i+=1
         estimate = estimate + 0.95 * err
-        err = p-(estimate+interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, estimate))
+        err = p - ( estimate + interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, estimate))
         err_mag=sum(abs.(err))
 
         if err_mag<smallest_err
@@ -235,6 +245,7 @@ Apply concatenated transform
 end
 
 
+
 """
 Apply affine transform to CartesianIndices
 """
@@ -250,7 +261,7 @@ end
 Decompose affine transform into three components
 start, step, direction cosines
 """
-function decompose(rot,shift) 
+function decompose(rot,shift)
     f = svd(rot)
 
     # remove scaling
@@ -263,11 +274,11 @@ function decompose(rot,shift)
 end
 
 function decompose(tfm::AffineTransform{T}) where {T}
-    decompose(tfm.rot,tfm.shift)
+    decompose(tfm.rot, tfm.shift)
 end
 
 function decompose(tfm::Matrix{T}) where {T}
-    decompose(tfm[1:3,1:3],tfm[1:3,4])
+    decompose(tfm[1:3,1:3], tfm[1:3,4])
 end
 
 
