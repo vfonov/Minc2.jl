@@ -57,14 +57,17 @@ end
 Create an empty Volume3D
 """
 function empty_volume_like(vol::Volume3D{T1,N}; store::Type{T}=Float64, history=nothing) where {T1,T,N}
-    out_vol = Array{Float64}(undef, size(vol.vol)...)
+    out_vol = similar(vol.vol, store)
     return Volume3D(out_vol, vol.v2w, isnothing(history) ? vol.history : history )
 end
 
 """
 Save Volume3D to minc file
 """
-function save_volume(fn, vol::Volume3D{T,N}; store::Type{S}=Float32,history=nothing) where {S,T,N}
+function save_volume(fn::AbstractString, 
+        vol::Volume3D{T,N}; 
+        store::Type{S}=Float32,
+        history=nothing) where {S,T,N}
     if isnothing(history)
         _history=vol.history
     else
@@ -88,9 +91,9 @@ function resample_grid_volume!(
     w2v::AffineTransform{C}, 
     itfm::Union{Vector{XFM}, XFM};
     interp::I=BSpline(Quadratic(Line(OnCell()))),
-    fill::T=0.0,
+    fill=0.0,
     ftol=1.0/80,
-    max_iter=10)::Array{T,4} where {C, T, I, XFM<:AnyTransform}
+    max_iter=10)::Array{T,4} where {T, C, I, XFM<:AnyTransform}
 
     # NEED to interpolate only over spatial dimensions
     in_vol_itp = extrapolate( interpolate( in_vol, (NoInterp(), interp, interp, interp)), fill)
@@ -186,7 +189,7 @@ function resample_volume!(in_vol::Array{T,3},
     w2v::AffineTransform{C}, 
     itfm::Union{Vector{XFM},XFM};
     interp::I=BSpline(Quadratic(Line(OnCell()))),
-    fill::T=zero(T),
+    fill=0.0,
     ftol=1.0/80,
     max_iter=10) where {C, T, I, XFM<:AnyTransform}
 
@@ -213,7 +216,7 @@ function resample_volume!(
     tfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
     itfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
     interp::I=nothing, 
-    fill=nothing, 
+    fill=0.0, 
     order=nothing,
     ftol=1.0/80,
     max_iter=10)::Volume3D{O,3} where {T,O,I,XFM<:AnyTransform}
@@ -225,9 +228,6 @@ function resample_volume!(
         itfm=inv(tfm)
     elseif isnothing(itfm) && isnothing(tfm)
         itfm=IdentityTransform() # identity transform
-    end
-    if isnothing(fill)
-        fill=zero(O)
     end
 
     if isnothing(interp)

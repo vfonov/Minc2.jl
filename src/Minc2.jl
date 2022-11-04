@@ -19,4 +19,7 @@ include("minc_hl.jl")
 # ITK and NIFTI interface
 include("nifti_io.jl")
 
+# Try to precompile things
+include("precompile.jl")
+
 end # module

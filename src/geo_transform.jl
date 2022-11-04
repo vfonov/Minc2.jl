@@ -82,7 +82,7 @@ end
 
 
 function GridTransform(::Type{T}=Float64,::Type{F}=Float64) where {T,F}
-    GridTransform{T,F}(
+    GridTransform(
         AffineTransform(T),
         zeros(F,3,3,3,3)
     )
@@ -115,7 +115,7 @@ end
 
 
 function InverseGridTransform(::Type{T}=Float64,::Type{F}=Float64) where {T,F}
-    InverseGridTransform{T,F}(
+    InverseGridTransform(
         AffineTransform(T),
         zeros(F,3,3,3,3)
     )
