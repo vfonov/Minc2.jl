@@ -31,7 +31,7 @@ end
 
 
 # Print Volume3D info
-Base.show(io::IO, z::Volume3D{T,N}) where {T,N} = print(io, "Volume3D{$(T),$(N)}:", size(z.vol), z.v2w)
+Base.show(io::IO, z::Volume3D{T,N}) where {T,N} = print(io, "Volume3D{$(T),$(N)}:", size(z.vol)," ", z.v2w)
 
 
 
@@ -202,8 +202,6 @@ function resample_volume!(in_vol::Array{T,3},
         ftol=1.0/80,
         max_iter=10) where {C, T, I, XFM<:AnyTransform}
 
-    @info "in_vol:" size(in_vol),size(out_vol)
-    
     in_vol_itp = extrapolate( interpolate( in_vol, interp), fill)
     @simd for c in CartesianIndices(out_vol)
         orig = transform_point(v2w, c )
@@ -274,7 +272,7 @@ function resample_volume(
         tfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
         itfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
         interp::I=nothing, 
-        fill=nothing,
+        fill=0.0,
         order=1,
         ftol=1.0/80,
         max_iter=10)::Volume3D where {T, O, I, XFM<:AnyTransform}
