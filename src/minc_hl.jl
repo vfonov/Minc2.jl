@@ -44,8 +44,8 @@ end
 Create an empty Volume3D
 """
 function empty_volume_like(
-    fn::String; 
-    store::Type{T}=Float64, history=nothing)::Volume3D{T} where {T}
+        fn::String; 
+        store::Type{T}=Float64, history=nothing)::Volume3D{T} where {T}
     out_vol,out_hdr, out_store_hdr, ref_history = empty_like_minc_volume_std_history(fn,store)
     v2w=voxel_to_world(out_hdr)
 
@@ -56,7 +56,10 @@ end
 """
 Create an empty Volume3D
 """
-function empty_volume_like(vol::Volume3D{T1,N}; store::Type{T}=Float64, history=nothing) where {T1,T,N}
+function empty_volume_like(
+        vol::Volume3D{T1,N}; 
+        store::Type{T}=Float64, 
+        history=nothing) where {T1,T,N}
     out_vol = similar(vol.vol, store)
     return Volume3D(out_vol, vol.v2w, isnothing(history) ? vol.history : history )
 end
@@ -85,15 +88,15 @@ end
 Resample 4D array using transformation , assume 1st dimension is non spatial
 """
 function resample_grid_volume!(
-    in_vol::Array{T,4},
-    out_vol::Array{T,4},
-    v2w::AffineTransform{C}, 
-    w2v::AffineTransform{C}, 
-    itfm::Union{Vector{XFM}, XFM};
-    interp::I=BSpline(Quadratic(Line(OnCell()))),
-    fill=0.0,
-    ftol=1.0/80,
-    max_iter=10)::Array{T,4} where {T, C, I, XFM<:AnyTransform}
+        in_vol::Array{T,4},
+        out_vol::Array{T,4},
+        v2w::AffineTransform{C}, 
+        w2v::AffineTransform{C}, 
+        itfm::Union{Vector{XFM}, XFM};
+        interp::I=BSpline(Quadratic(Line(OnCell()))),
+        fill=0.0,
+        ftol=1.0/80,
+        max_iter=10)::Array{T,4} where {T, C, I, XFM<:AnyTransform}
 
     # NEED to interpolate only over spatial dimensions
     in_vol_itp = extrapolate( interpolate( in_vol, (NoInterp(), interp, interp, interp)), fill)
@@ -115,9 +118,9 @@ Resample Volume3D that contain 4D array,
 using transformation , assume 1st dimension is non spatial
 """
 function resample_grid(
-    in_grid::Volume3D{T,4}, 
-    itfm::Union{Vector{XFM}, XFM}; 
-    like::Union{Nothing,Volume3D{L,4}}=nothing)::Volume3D{T,4} where {T,L, XFM<:AnyTransform}
+        in_grid::Volume3D{T,4}, 
+        itfm::Union{Vector{XFM}, XFM}; 
+        like::Union{Nothing,Volume3D{L,4}}=nothing)::Volume3D{T,4} where {T,L, XFM<:AnyTransform}
 
     if isnothing(like)
       out_vol = similar(in_grid.vol)
@@ -167,8 +170,8 @@ Convert arbitrary transformation
 into a single GridTransform
 """
 function normalize_tfm(tfm::Union{Vector{XFM}, XFM},
-    ref::G;
-    store::Type{T}=Float64)::GridTransform{Float64,T} where {T, XFM<:AnyTransform, G<:GridTransform}
+        ref::G;
+        store::Type{T}=Float64)::GridTransform{Float64,T} where {T, XFM<:AnyTransform, G<:GridTransform}
 
     out_grid = similar(ref.vector_field, store)
     v2w = ref.voxel_to_world
@@ -184,17 +187,16 @@ end
 Resample 3D array using transformation 
 """
 function resample_volume!(in_vol::Array{T,3}, 
-    out_vol::Array{T,3}, 
-    v2w::AffineTransform{C}, 
-    w2v::AffineTransform{C}, 
-    itfm::Union{Vector{XFM},XFM};
-    interp::I=BSpline(Quadratic(Line(OnCell()))),
-    fill=0.0,
-    ftol=1.0/80,
-    max_iter=10) where {C, T, I, XFM<:AnyTransform}
+        out_vol::Array{T,3}, 
+        v2w::AffineTransform{C}, 
+        w2v::AffineTransform{C}, 
+        itfm::Union{Vector{XFM},XFM};
+        interp::I=BSpline(Quadratic(Line(OnCell()))),
+        fill=0.0,
+        ftol=1.0/80,
+        max_iter=10) where {C, T, I, XFM<:AnyTransform}
 
-    in_vol_itp = extrapolate( interpolate( in_vol, interp),fill)
-
+    in_vol_itp = extrapolate( interpolate( in_vol, interp), fill)
     @simd for c in CartesianIndices(out_vol)
         orig = transform_point(v2w, c )
         dst  = transform_point(itfm, orig; ftol, max_iter )
@@ -211,15 +213,15 @@ end
 Resample Volume3D using transformation 
 """
 function resample_volume!(
-    in_vol::Volume3D{T,3}, 
-    out_vol::Volume3D{O,3}; 
-    tfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
-    itfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
-    interp::I=nothing, 
-    fill=0.0, 
-    order=nothing,
-    ftol=1.0/80,
-    max_iter=10)::Volume3D{O,3} where {T,O,I,XFM<:AnyTransform}
+        in_vol::Volume3D{T,3}, 
+        out_vol::Volume3D{O,3}; 
+        tfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
+        itfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
+        interp::I=nothing, 
+        fill=0.0, 
+        order=nothing,
+        ftol=1.0/80,
+        max_iter=10)::Volume3D{O,3} where {T,O,I,XFM<:AnyTransform}
 
     @assert ndims(out_vol.vol)==3
     @assert ndims(in_vol.vol)==3
@@ -259,15 +261,15 @@ end
 Resample Volume3D using transformation 
 """
 function resample_volume(
-    in_vol::Volume3D{T,3};
-    like::Union{Volume3D{O,3},Nothing}=nothing,
-    tfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
-    itfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
-    interp::I=nothing, 
-    fill=nothing,
-    order=1,
-    ftol=1.0/80,
-    max_iter=10)::Volume3D where {T, O, I, XFM<:AnyTransform}
+        in_vol::Volume3D{T,3};
+        like::Union{Volume3D{O,3},Nothing}=nothing,
+        tfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
+        itfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
+        interp::I=nothing, 
+        fill=nothing,
+        order=1,
+        ftol=1.0/80,
+        max_iter=10)::Volume3D where {T, O, I, XFM<:AnyTransform}
 
     out_vol = empty_volume_like( isnothing(like) ? in_vol : like ;
         store = (isnothing(like) ? eltype(in_vol.vol) : eltype(like.vol) ) )
@@ -279,12 +281,12 @@ end
 Calculate jacobian for an arbitrary transformation
 """
 function calculate_jacobian!(
-    tfm::Union{Vector{XFM},XFM},
-    out_vol::Array{T,3},
-    out_v2w::AffineTransform{C};
-    interp::I=BSpline(Quadratic(Line(OnCell()))),
-    ftol=1.0/80,
-    max_iter=10) where {C,T,I,XFM<:AnyTransform}
+        tfm::Union{Vector{XFM},XFM},
+        out_vol::Array{T,3},
+        out_v2w::AffineTransform{C};
+        interp::I=BSpline(Quadratic(Line(OnCell()))),
+        ftol=1.0/80,
+        max_iter=10) where {C,T,I,XFM<:AnyTransform}
 
     # calculate scaling matrix from the voxel to world matrix
     _,step,_ = decompose(out_v2w)
@@ -317,11 +319,11 @@ end
 Calculate jacobian for an arbitrary transformation
 """
 function calculate_jacobian!(
-    tfm::Union{Vector{XFM},XFM}, 
-    out_vol::Volume3D{T,3}; 
-    interp::I=BSpline(Quadratic(Line(OnCell()))),
-    ftol=1.0/80,
-    max_iter=10)::Volume3D{T,3} where {T,I,XFM<:AnyTransform}
+        tfm::Union{Vector{XFM},XFM}, 
+        out_vol::Volume3D{T,3}; 
+        interp::I=BSpline(Quadratic(Line(OnCell()))),
+        ftol=1.0/80,
+        max_iter=10)::Volume3D{T,3} where {T,I,XFM<:AnyTransform}
 
     calculate_jacobian!(tfm, out_vol.vol,out_vol.v2w;interp,ftol,max_iter) 
     return out_vol
