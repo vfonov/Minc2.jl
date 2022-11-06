@@ -29,6 +29,12 @@ function Volume3D(vol::Array{T,N}, like::Volume3D;
     return Volume3D(vol, like.v2w, isnothing(history) ? like.history : history)
 end
 
+
+# Print Volume3D info
+Base.show(io::IO, z::Volume3D{T,N}) where {T,N} = print(io, "Volume3D{$(T),$(N)}:", size(z.vol), z.v2w)
+
+
+
 """
 Read Volume3D from minc file
 """

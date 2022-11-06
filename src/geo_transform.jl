@@ -283,9 +283,10 @@ end
 
 
 # helper 
-Base.show(io::IO, z::GridTransform{T}) where {T} = print(io, "GridTransform:", size(z.vector_field))
+Base.show(io::IO, z::GridTransform{T,F,I}) where {T,F,I} = print(io, "GridTransform{$(T),$(F),...}:", size(z.vector_field))
+
 # helper 
-Base.show(io::IO, z::InverseGridTransform{T})  where {T} = print(io, "InverseGridTransform:", size(z.vector_field))
+Base.show(io::IO, z::InverseGridTransform{T,F,I})  where {T,F,I} = print(io, "InverseGridTransform{$(T),$(F),...}:", size(z.vector_field))
 
 
 # NOTES
