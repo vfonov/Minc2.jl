@@ -188,6 +188,22 @@ function normalize_tfm(tfm::Union{Vector{XFM}, XFM},
 end
 
 
+"""
+Convert arbitrary transformation 
+into a single GridTransform
+"""
+function normalize_tfm(tfm::Union{Vector{XFM}, XFM},
+        ref::G;
+        store::Type{T}=Float64)::GridTransform{Float64,T} where {T, XFM<:AnyTransform, G<:Volume3D}
+
+    out_grid = similar(ref.vol, store)
+    v2w = ref.v2w
+
+    tfm_to_grid!(tfm, out_grid, v2w)
+
+    return GridTransform(v2w, out_grid)
+end
+
 
 """
 Resample 3D array using transformation 
