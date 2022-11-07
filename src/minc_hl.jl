@@ -30,6 +30,21 @@ function Volume3D(vol::Array{T,N}, like::Volume3D;
 end
 
 
+"""
+Create GridTransform from Volume3D
+"""
+function GridTransform(vol::V) where {V<:Volume3D}
+    return GridTransform(vol.v2w, vol.vol)
+end
+
+"""
+Create InverseGridTransform from Volume3D
+"""
+function InverseGridTransform(vol::V) where {V<:Volume3D}
+    return InverseGridTransform(vol.v2w, vol.vol)
+end
+
+
 # Print Volume3D info
 Base.show(io::IO, z::Volume3D{T,N}) where {T,N} = print(io, "Volume3D{$(T),$(N)}:", size(z.vol)," ", z.v2w)
 
@@ -174,7 +189,7 @@ function tfm_to_grid(tfm::Union{Vector{XFM}, XFM},
     end
     v2w = ref.v2w
 
-    tfm_to_grid!(tfm, out_grid, v2w;ftol,max_iter)
+    tfm_to_grid!(tfm, out_grid, v2w; ftol, max_iter)
     return Volume3D( out_grid, v2w)
 end
 
