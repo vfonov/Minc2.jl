@@ -167,7 +167,7 @@ function tfm_to_grid(tfm::Union{Vector{XFM}, XFM},
         store::Type{T}=Float64,ftol=1.0/80,max_iter=10)::Volume3D{T,4} where {T, XFM<:AnyTransform, G<:Volume3D}
     # TODO: deal with 3D ref ?
     out_grid = similar(ref.vol, store)
-    v2w = ref.voxel_to_world
+    v2w = ref.v2w
 
     tfm_to_grid!(tfm,out_grid,v2w;ftol,max_iter)
     return Volume3D( out_grid, v2w)
