@@ -147,11 +147,11 @@ into 4D array
 function tfm_to_grid!(
         tfm::Union{Vector{XFM}, XFM}, 
         grid::Array{T,4},
-        v2w::AffineTransform{C})::Array{T,4} where {T, C, XFM<:AnyTransform}
+        v2w::AffineTransform{C};ftol=1.0/80,max_iter=10)::Array{T,4} where {T, C, XFM<:AnyTransform}
     
     @simd for c in CartesianIndices(size(grid)[2:end])
         orig = transform_point(v2w, c )
-        dst  = transform_point(tfm, orig)
+        dst  = transform_point(tfm, orig;max_iter,ftol)
         @inbounds grid[:,c] .= dst .- orig
     end
     return grid
@@ -163,11 +163,11 @@ into Volume3D with 4D array
 """
 function tfm_to_grid(tfm::Union{Vector{XFM}, XFM},
         ref::G;
-        store::Type{T}=Float64)::Volume3D{T,4} where {T, XFM<:AnyTransform, G<:GridTransform}
+        store::Type{T}=Float64,ftol=1.0/80,max_iter=10)::Volume3D{T,4} where {T, XFM<:AnyTransform, G<:GridTransform}
     out_grid = similar(ref.vector_field, store)
     v2w = ref.voxel_to_world
 
-    tfm_to_grid!(tfm,out_grid,v2w)
+    tfm_to_grid!(tfm,out_grid,v2w;ftol,max_iter)
     return Volume3D( out_grid, v2w)
 end
 
@@ -177,12 +177,12 @@ into a single GridTransform
 """
 function normalize_tfm(tfm::Union{Vector{XFM}, XFM},
         ref::G;
-        store::Type{T}=Float64)::GridTransform{Float64,T} where {T, XFM<:AnyTransform, G<:GridTransform}
+        store::Type{T}=Float64,ftol=1.0/80,max_iter=10)::GridTransform{Float64,T} where {T, XFM<:AnyTransform, G<:GridTransform}
 
     out_grid = similar(ref.vector_field, store)
     v2w = ref.voxel_to_world
 
-    tfm_to_grid!(tfm,out_grid,v2w)
+    tfm_to_grid!(tfm,out_grid,v2w;ftol,max_iter)
 
     return GridTransform(v2w, out_grid)
 end
@@ -194,12 +194,12 @@ into a single GridTransform
 """
 function normalize_tfm(tfm::Union{Vector{XFM}, XFM},
         ref::G;
-        store::Type{T}=Float64)::GridTransform{Float64,T} where {T, XFM<:AnyTransform, G<:Volume3D}
+        store::Type{T}=Float64,ftol=1.0/80,max_iter=10)::GridTransform{Float64,T} where {T, XFM<:AnyTransform, G<:Volume3D}
 
     out_grid = similar(ref.vol, store)
     v2w = ref.v2w
 
-    tfm_to_grid!(tfm, out_grid, v2w)
+    tfm_to_grid!(tfm, out_grid, v2w;ftol,max_iter)
 
     return GridTransform(v2w, out_grid)
 end
