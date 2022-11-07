@@ -166,10 +166,15 @@ function tfm_to_grid(tfm::Union{Vector{XFM}, XFM},
         ref::G;
         store::Type{T}=Float64,ftol=1.0/80,max_iter=10)::Volume3D{T,4} where {T, XFM<:AnyTransform, G<:Volume3D}
     # TODO: deal with 3D ref ?
-    out_grid = similar(ref.vol, store)
+    if ndims(ref.vol)==3
+        # need to generate 4D output
+        out_grid = Array{T,4}(undef,(3,size(ref.vol)...))
+    else
+        out_grid = similar(ref.vol, store)
+    end
     v2w = ref.v2w
 
-    tfm_to_grid!(tfm,out_grid,v2w;ftol,max_iter)
+    tfm_to_grid!(tfm, out_grid, v2w;ftol,max_iter)
     return Volume3D( out_grid, v2w)
 end
 
