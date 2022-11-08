@@ -160,10 +160,10 @@ Convert arbitrary transformation
 into 4D array
 """
 function tfm_to_grid!(
-        tfm::Union{Vector{XFM}, XFM}, 
+        tfm::XFM, 
         grid::Array{T,4},
         v2w::AffineTransform{C};
-        ftol=1.0/80,max_iter=10)::Array{T,4} where {T, C, XFM<:AnyTransform}
+        ftol=1.0/80,max_iter=10)::Array{T,4} where {T, C, XFM<:Tuple}
     
     @simd for c in CartesianIndices(size(grid)[2:end])
         orig = transform_point(v2w, c )
@@ -189,7 +189,7 @@ function tfm_to_grid(tfm::Union{Vector{XFM}, XFM},
     end
     v2w = ref.v2w
 
-    tfm_to_grid!(tfm, out_grid, v2w; ftol, max_iter)
+    tfm_to_grid!(Tuple(tfm), out_grid, v2w; ftol, max_iter)
     return Volume3D( out_grid, v2w)
 end
 
@@ -204,7 +204,7 @@ function normalize_tfm(tfm::Union{Vector{XFM}, XFM},
     out_grid = similar(ref.vector_field, store)
     v2w = ref.voxel_to_world
 
-    tfm_to_grid!(tfm,out_grid,v2w;ftol,max_iter)
+    tfm_to_grid!(Tuple(tfm),out_grid,v2w;ftol,max_iter)
 
     return GridTransform(v2w, out_grid)
 end
@@ -221,7 +221,7 @@ function normalize_tfm(tfm::Union{Vector{XFM}, XFM},
     out_grid = similar(ref.vol, store)
     v2w = ref.v2w
 
-    tfm_to_grid!(tfm, out_grid, v2w;ftol,max_iter)
+    tfm_to_grid!(Tuple(tfm), out_grid, v2w;ftol,max_iter)
 
     return GridTransform(v2w, out_grid)
 end
