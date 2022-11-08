@@ -245,6 +245,24 @@ Apply concatenated transform
 end
 
 
+@inline function transform_point(
+    tfm::Tuple{},
+    p::SVector{3,T};
+    max_iter::Int=10,
+    ftol::Float64=1.0/80)::SVector{3,T} where {T}
+    return p
+end
+
+
+@inline function transform_point(
+    tfm::X,
+    p::SVector{3,T};
+    max_iter::Int=10,
+    ftol::Float64=1.0/80)::SVector{3,T} where {X<:Tuple,T}
+
+    transform_point(tfm[2:end],transform_point(tfm[1],p;max_iter,ftol);max_iter,ftol)
+end
+
 
 """
 Apply affine transform to CartesianIndices
