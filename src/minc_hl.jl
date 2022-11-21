@@ -322,6 +322,50 @@ function resample_volume(
     return resample_volume!(in_vol, out_vol; tfm, itfm, interp, fill, order, ftol, max_iter)
 end
 
+
+"""
+Reshape Volume3D
+TODO: make this more elaborate
+"""
+function reshape_volume(
+        in_vol::Volume3D{T,N};
+        dimrange=nothing,
+        fill_val::T=zero(T))::Volume3D{T,N} where {T,N}
+
+    sz = size(in_vol.vol)
+    if !isnothing(dimrange)
+        @assert ndims(in_vol.vol) == length(dimrange) "Unequal dimrange size"
+
+        new_sz    = [ sz[j] + -i[1]+i[2]                           for (j,i) in enumerate(dimrange)]
+        in_range  = [(max(i[1]+1,1) : min(i[2]+sz[j],     sz[j])) for (j,i) in enumerate(dimrange)]
+        out_range = [(max(-i[1]+1,1): min(-i[2]+new_sz[j],new_sz[j])) for (j,i) in enumerate(dimrange)]
+    else
+        new_sz = sz
+        in_range  = [(1:i) for i in sz]
+        out_range = [(1:i) for i in sz]
+    end
+
+    if N==4 # we have vector dimension (?)
+        shift=1
+    else
+        shift=0
+    end
+
+    #start,step,dir_cos = decompose(in_vol.v2w)
+    new_start = transform_point(in_vol.v2w, SVector{3,Float64}( [dimrange[i+shift][1] for i in 1:(N-shift)]))
+    old_start = transform_point(in_vol.v2w, SVector{3,Float64}( [0.0,0.0,0.0] ) )
+
+    shift = new_start-old_start
+    out_array = fill(fill_val, new_sz...)
+
+    @info "new" out_range,in_range
+
+    out_array[out_range...] .= in_vol.vol[in_range...]
+
+    return Volume3D(out_array, AffineTransform(in_vol.v2w.rot,in_vol.v2w.shift+shift))
+end
+
+
 """
 Calculate jacobian for an arbitrary transformation
 """
