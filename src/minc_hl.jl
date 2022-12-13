@@ -386,7 +386,7 @@ function calculate_jacobian!(
     vector_field = Array{T}(undef, 3, size(out_vol)...)
 
     @simd for c in CartesianIndices(out_vol)
-        orig = transform_point(v2w, c )
+        orig = transform_point(out_v2w, c )
         dst  = transform_point(tfm, orig; ftol, max_iter )
 
         @inbounds vector_field[:,c] .= dst # .- orig
