@@ -33,6 +33,10 @@ function parse_commandline()
             help = "Fill value"
             arg_type = Float64
             default = 0.0
+        "--invert"
+            help = "Invert transform"
+            action = :store_true
+
     end
     parse_args(ARGS, s)
 end
@@ -53,13 +57,16 @@ end
 
 if !isnothing(args["transform"])
     tfm=Minc2.load_transforms(args["transform"])
+    if args["invert"]
+        tfm=Minc2.inv(tfm)
+    end
 else
     tfm=nothing
 end
 
 @info "Transform:" tfm
 
-Minc2.resample_volume!(out_vol,in_vol;tfm,order=args["order"],
+Minc2.resample_volume!(in_vol,out_vol;tfm,order=args["order"],
     fill=args["fill"],ftol=args["ftol"],max_iter=args["max_iter"])
 
 
