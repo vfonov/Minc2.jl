@@ -69,7 +69,7 @@ end
 Write ANTs style warp transform
 """
 function write_itk_nifti_transform(fn::AbstractString,
-        xfm::Minc2.GridTransform{Float64,T};store::Type{T}=Float32) where {T}
+        xfm::Minc2.GridTransform{Float64,T}; store::Type{S}=Float32) where {T,S}
     save_nifti_volume(fn,Volume3D( permutedims(xfm.vector_field[:,:,:,:,:],(2,3,4,5,1)), xfm.voxel_to_world);store)
 end
 

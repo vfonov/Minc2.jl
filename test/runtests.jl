@@ -178,7 +178,23 @@ end
     @test in_hdr.step ≈ new_hdr.step atol=1e-6 
     @test in_hdr.dir_cos ≈ new_hdr.dir_cos atol=1e-6 
     @test in_hdr.dims == new_hdr.dims
-
 end
 
-# TODO: check xfm files
+
+@testset "read and write ITK transforms" begin
+    mktempdir() do tmp
+        xfm=Minc2.read_itk_txt_transform("input/ants_linear.txt")
+        Minc2.write_itk_txt_transform(joinpath(tmp,"test_ants_linear.txt"),xfm)
+        xfm2=Minc2.read_itk_txt_transform(joinpath(tmp,"test_ants_linear.txt"))
+        @test xfm.rot ≈ xfm2.rot
+        @test xfm.shift ≈ xfm2.shift
+
+        grid_xfm=Minc2.read_itk_nifti_transform("input/std_sub-1643254_ses-2_t1w3Warp.nii.gz")
+        Minc2.write_itk_nifti_transform(joinpath(tmp,"test_ants_warp.txt"),grid_xfm)
+        grid2_xfm=Minc2.read_itk_nifti_transform(joinpath(tmp,"test_ants_warp.txt"))
+        @test grid_xfm.voxel_to_world.rot ≈  grid2_xfm.voxel_to_world.rot
+        @test grid_xfm.voxel_to_world.shift ≈  grid2_xfm.voxel_to_world.shift
+        @test grid_xfm.vector_field  ≈  grid2_xfm.vector_field
+    end
+end
+
