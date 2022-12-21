@@ -55,14 +55,24 @@ end
 """
 Read ANTs style warp transform
 """
-function read_itk_nifti_transform(fn::AbstractString;store::Type{T}=Float32)::Minc2.GridTransform{Float64,T} where {T}
+function read_itk_nifti_transform(fn::AbstractString;
+        store::Type{T}=Float32)::Minc2.GridTransform{Float64,T} where {T}
     V = read_nifti_volume(fn; store)
     
     @assert ndims(V.vol)  == 5
     @assert size(V.vol,5) == 3
     #reshape into minc convention
-    return Minc2.GridTransform(V.v2w, permutedims(dropdims(V.vol,dims=4),(4,1,2,3)))
+    return Minc2.GridTransform(V.v2w, permutedims(dropdims(V.vol, dims=4),(4,1,2,3)))
 end
+
+"""
+Write ANTs style warp transform
+"""
+function write_itk_nifti_transform(fn::AbstractString,
+        xfm::Minc2.GridTransform{Float64,T};store::Type{T}=Float32) where {T}
+    save_nifti_volume(fn,Volume3D( permutedims(xfm.vector_field[:,:,:,:,:],(2,3,4,5,1)), xfm.voxel_to_world);store)
+end
+
 
 
 """
@@ -80,6 +90,9 @@ function read_ants_transform(fn::AbstractString; store::Type{T}=Float32)::Minc2.
 end
 
 
+"""
+Read ITK legacy transform in .txt format
+"""
 function read_itk_txt_transform(fn::AbstractString)::Minc2.AffineTransform{Float64}
     # replicating https://github.com/InsightSoftwareConsortium/ITK/blob/master/Modules/IO/TransformInsightLegacy/src/itkTxtTransformIO.cxx
     _delimiters=[' ', '\t', '\n','\r']
@@ -123,9 +136,9 @@ function read_itk_txt_transform(fn::AbstractString)::Minc2.AffineTransform{Float
         @assert tfm_dims=="3_3"
         @assert length(parameters) == 12
         @assert length(fixed_parameters) == 3
-        rot_matrix=reshape(parameters[1:9],3,3)
+        rot_matrix   = reshape(parameters[1:9],3,3)
         translation  = parameters[10:12]
-        center = fixed_parameters
+        center       = fixed_parameters
 
         # need to convert to rot_matrix and offset
         # as defined in 
@@ -135,5 +148,23 @@ function read_itk_txt_transform(fn::AbstractString)::Minc2.AffineTransform{Float
         return Minc2.AffineTransform(rot_matrix, offset)
     else
         throw( Minc2Error("Unsupported transform type \"$tfm_type\""))
+    end
+end
+
+
+"""
+Write affine transform in ITK .txt format
+"""
+function write_itk_txt_transform(fn::AbstractString,
+        xfm::Minc2.AffineTransform{Float64})
+    # TODO: preserve fixed parameters?
+    fixed_parameters = zeros(3) 
+    parameters = vcat(reshape(xfm.rot,9), xfm.shift)
+    open(fn,"w") do io
+        write(io,"#Insight Transform File V1.0\n")
+        write(io,"#Transform 0\n")
+        write(io,"Transform: MatrixOffsetTransformBase_double_3_3\n")
+        write(io,"Parameters: ",join(parameters," "),"\n")
+        write(io,"FixedParameters: ",join(fixed_parameters," "),"\n")
     end
 end

@@ -121,7 +121,6 @@ end
 Append affine transform
 """
 function append_linear_transform(h::TransformHandle, lin::AffineTransform)
-    
     mat = Matrix{Float64}( Float64[lin.rot lin.shift;0 0 0 1]')
     @minc2_check minc2_simple.minc2_xfm_append_linear_transform(h.x[],
         Base.unsafe_convert(Ptr{Cdouble}, mat) )
@@ -178,10 +177,18 @@ function load_transforms(fname::String)::Vector{AnyTransform}
 end
 
 
-function save_transforms(fname::String, xfm::Vector{AnyTransform};
-        grid_store::Type{T}=Float32 ) where {T}
+function save_transforms(fname::String, 
+        xfm::Union{Vector{XFM}, XFM};
+        grid_store::Type{T}=Float32 ) where {T, XFM<:AnyTransform}
     h = TransformHandle()
     grid_ctr=0# count grid files
+
+    if typeof(xfm) <: Vector
+        _xfm = xfm
+    else
+        _xfm = AnyTransform[xfm]
+    end
+
     for x in xfm
         if x isa AffineTransform
             append_linear_transform(h,x)
