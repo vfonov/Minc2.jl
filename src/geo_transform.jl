@@ -285,8 +285,8 @@ function decompose(rot,shift)
     # remove scaling
     dir_cos = f.U * f.Vt
 
-    step  = diag(rot         * Base.inv(dir_cos))
-    start = transpose(shift) * Base.inv(dir_cos)
+    step  = diag(rot           * Base.inv(dir_cos))
+    start = permutedims(shift) * Base.inv(dir_cos)
     
     return start, step, dir_cos
 end
