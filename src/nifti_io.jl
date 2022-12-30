@@ -42,7 +42,7 @@ function save_nifti_volume(fn::AbstractString, vol::Volume3D{T};
     ni=NIVolume( convert(AbstractArray{S}, vol.vol),
         qfac=1.0f0,
         quatern_b=  R_quat[2],  quatern_c=R_quat[3],  quatern_d=R_quat[4],
-        qoffset_x= start[1,1], qoffset_y=start[1,2], qoffset_z=start[1,3],
+        qoffset_x= start[1], qoffset_y=start[2], qoffset_z=start[3],
         voxel_size=Tuple(Float32(i) for i in step),
         xyzt_units=Int8(2),
         regular=Int8('r'))
