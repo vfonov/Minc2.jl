@@ -92,6 +92,7 @@ function save_volume(fn::AbstractString,
         vol::Volume3D{T,N}; 
         store::Type{S}=Float32,
         history=nothing) where {S,T,N}
+    
     if isnothing(history)
         _history=vol.history
     else
@@ -280,7 +281,7 @@ function resample_volume!(
     if isnothing(interp)
         if O <: Integer # output is integer, use nearest neighbor
             interp=BSpline(Constant())
-            if !isnothing(order)
+            if !isnothing(order) && order!=0
                 @error "Unsupported order when interpolating integers" order
             end
         else 
@@ -384,14 +385,14 @@ function calculate_jacobian!(
 
     # First step: generate vector field of transformations
     vector_field = Array{T}(undef, 3, size(out_vol)...)
-
+    @inbounds let 
     @simd for c in CartesianIndices(out_vol)
         orig = transform_point(out_v2w, c )
         dst  = transform_point(tfm, orig; ftol, max_iter )
 
-        @inbounds vector_field[:,c] .= dst # .- orig
+        vector_field[:,c] .= dst # .- orig
     end
-
+    end
     # Second step: calculate jacobian determinant 
     vector_field_itp = extrapolate( interpolate( vector_field, 
         (NoInterp(),interp,interp,interp)), Flat())
