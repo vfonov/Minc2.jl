@@ -279,24 +279,24 @@ end
 Decompose affine transform into three components
 start, step, direction cosines
 """
-function decompose(rot,shift)
+function decompose(rot, shift)
     f = svd(rot)
 
     # remove scaling
     dir_cos = f.U * f.Vt
 
-    step  = diag(rot         * Base.inv(dir_cos))
-    start = transpose(shift) * Base.inv(dir_cos)
+    step  = diag(rot           * Base.inv(dir_cos))
+    start = permutedims(permutedims(shift) * Base.inv(dir_cos))
     
     return start, step, dir_cos
 end
 
 function decompose(tfm::AffineTransform{T}) where {T}
-    decompose(tfm.rot, tfm.shift)
+    return decompose(tfm.rot, tfm.shift)
 end
 
 function decompose(tfm::Matrix{T}) where {T}
-    decompose(tfm[1:3,1:3], tfm[1:3,4])
+    return decompose(tfm[1:3,1:3], tfm[1:3,4])
 end
 
 

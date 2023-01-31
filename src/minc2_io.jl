@@ -625,10 +625,10 @@ function voxel_to_world(hdr::MincHeader)::AffineTransform{Float64}
         else
             rot[i,i] = 1
         end
-        scales[i,i]=hdr.step[aa]
-        start[i]=hdr.start[aa]
+        scales[i,i] = hdr.step[aa]
+        start[i] = hdr.start[aa]
     end
-    origin=transpose(transpose(start) * rot)
+    origin = permutedims(permutedims(start) * rot)
 
     return AffineTransform(scales*rot, origin)
 end
@@ -651,16 +651,10 @@ function create_header_from_v2w(
 
     time_dim = !isnothing(time_step) && !isnothing(time_start)
 
-    start,step,dir_cos = decompose(t)
-    # f = svd(t.rot)
-
-    # # remove scaling
-    # dir_cos = f.U * f.Vt
-
-    # step  = diag(t.rot         * Base.inv(dir_cos))
-    # start = transpose(t.shift) * Base.inv(dir_cos)
+    start, step, dir_cos = decompose(t)
 
     hdr = MincHeader(3 + vector_dim + time_dim )
+
     # TODO: verify sz dimensionality
     for i = 1:length(sz)
         hdr.dims[i] = sz[i]

@@ -55,7 +55,7 @@ Read Volume3D from minc file
 """
 function read_volume(fn::String; store::Type{T}=Float64)::Volume3D{T} where {T}
     in_vol,in_hdr,in_store_hdr,in_history = read_minc_volume_std_history(fn, store)
-    v2w=voxel_to_world(in_hdr)
+    v2w = voxel_to_world(in_hdr)
 
     return Volume3D(in_vol, v2w, in_history)
 end
