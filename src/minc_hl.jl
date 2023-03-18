@@ -4,16 +4,33 @@ using Interpolations
 using Dates
 
 """
-An abstract 3D volume, could be vector field or time dimension
+An abstract 3D volume, could be vector field or volume with time dimension
 """
 struct Volume3D{T,N}
-    vol::Array{T,N} # an abstract volume
-    v2w::AffineTransform{Float64} # transformation from voxel to world coordinates
-    history::Union{String,Nothing} # file metadata: history
+    "Volume contents"
+    vol::Array{T,N} 
+    "Voxel to world affine transform"
+    v2w::AffineTransform{Float64} 
+    "Metadata: Volume history"
+    history::Union{String,Nothing} 
 end
 
 """
-Create Volume3D
+Extract voxel to world affine transform from a Volume3D
+"""
+voxel_to_world(vol::Volume3D) = vol.v2w
+
+"""
+Extract world to voxel affine transform from a Volume3D
+"""
+function world_to_voxel(vol::Volume3D)
+    v2w=voxel_to_world(vol)
+    return Base.inv(v2w)
+end
+
+
+"""
+Create Volume3D from an array and affine transform
 """
 function Volume3D(vol::Array{T,N}, v2w::AffineTransform{Float64}; 
         history::Union{AbstractString,Nothing}=nothing)::Volume3D{T,N} where {T,N}
@@ -22,7 +39,7 @@ end
 
 
 """
-Create Volume3D
+Create Volume3D from an array and another Volume3D that is used for sampling information
 """
 function Volume3D(vol::Array{T,N}, like::Volume3D; 
         history::Union{AbstractString,Nothing}=nothing)::Volume3D{T,N}  where {T,N}
@@ -31,14 +48,15 @@ end
 
 
 """
-Create GridTransform from Volume3D
+Create GridTransform from Volume3D, assume it is a vector field
 """
 function GridTransform(vol::V) where {V<:Volume3D}
     return GridTransform(vol.v2w, vol.vol)
 end
 
+
 """
-Create InverseGridTransform from Volume3D
+Create InverseGridTransform from Volume3D, assume it is a vector field
 """
 function InverseGridTransform(vol::V) where {V<:Volume3D}
     return InverseGridTransform(vol.v2w, vol.vol)
@@ -105,9 +123,9 @@ function save_volume(fn::AbstractString,
 end
 
 
-
 """
-Resample 4D array using transformation , assume 1st dimension is non spatial
+Resample 4D array using transformation,
+assume 1st dimension is non spatial (vector dimension)
 """
 function resample_grid_volume!(
         in_vol::Array{T,4},
@@ -135,9 +153,10 @@ function resample_grid_volume!(
     out_vol
 end
 
+
 """
 Resample Volume3D that contain 4D array,
-using transformation , assume 1st dimension is non spatial
+using transformation, assume 1st dimension is non spatial
 """
 function resample_grid(
         in_grid::Volume3D{T,4}, 
@@ -156,9 +175,10 @@ function resample_grid(
     return Volume3D(out_vol, v2w)
 end
 
+
 """
 Convert arbitrary transformation 
-into 4D array
+into vector field
 """
 function tfm_to_grid!(
         tfm::Union{Vector{XFM}, XFM}, 
@@ -174,9 +194,10 @@ function tfm_to_grid!(
     return grid
 end
 
+
 """
 Convert arbitrary transformation 
-into Volume3D with 4D array
+into Volume3D with 4D array containing vector field
 """
 function tfm_to_grid(
         tfm::Union{Vector{XFM}, XFM},
@@ -194,6 +215,7 @@ function tfm_to_grid(
     tfm_to_grid!(tfm, out_grid, v2w; ftol, max_iter)
     return Volume3D( out_grid, v2w)
 end
+
 
 """
 Convert arbitrary transformation 
@@ -326,7 +348,7 @@ end
 
 """
 Reshape Volume3D
-TODO: make this more elaborate
+Work in progress
 """
 function reshape_volume(
         in_vol::Volume3D{T,N};
@@ -368,7 +390,7 @@ end
 
 
 """
-Calculate jacobian for an arbitrary transformation
+Calculate dense jacobian determinant field for an arbitrary transformation
 """
 function calculate_jacobian!(
         tfm::Union{Vector{XFM},XFM},
@@ -406,7 +428,7 @@ function calculate_jacobian!(
 end
 
 """
-Calculate jacobian for an arbitrary transformation
+Calculate dense jacobian determinant field for an arbitrary transformation
 """
 function calculate_jacobian!(
         tfm::Union{Vector{XFM},XFM}, 
@@ -420,10 +442,9 @@ function calculate_jacobian!(
 end
 
 """
-generate minc-style history from program args
+Generate minc-style history from program args
 """
 function format_history(args)::String
-    #stamp=strftime("%a %b %d %T %Y>>>", gmtime())
-    # Thu Jul 30 14:23:47 2009
     return Dates.format(now(),"e d u HH:MM:SS YYYY")*">>>"*join(args," ")
 end
+

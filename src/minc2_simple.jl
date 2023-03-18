@@ -1,7 +1,10 @@
+# interface with minc2-simple C library
+# linked with libminc 
+
 module minc2_simple
 using LIBMINC_jll
 using CBinding
-# Main.SYSROOT...,
+
 c`$([
     "-I$(LIBMINC_jll.artifact_dir)/include",
     "-L$(dirname(LIBMINC_jll.libminc2_path))", 
@@ -13,6 +16,4 @@ c"""
 #include <minc2-simple.h>
 """ji
 
-#c"typedef double minc2_dir_cos[3];"j
 end
-

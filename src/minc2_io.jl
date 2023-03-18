@@ -2,7 +2,7 @@ using CBinding
 using .minc2_simple
 
 """
-Axis typed from MINC volume, TODO: make this compatible with NIFTI ?
+Low Level: Axis types from MINC volume, TODO: make this compatible with NIFTI ?
 """
 @enum DIM begin
     DIM_UNKNOWN = Cint(minc2_simple.MINC2_DIM_UNKNOWN)
@@ -16,14 +16,14 @@ end
 
 
 """
-Mapping MINC2 spatial dimensions to proper spatial dimension (should be identity for spatial dims)
+Low Level: Mapping MINC2 spatial dimensions to proper spatial dimension (should be identity for spatial dims)
 """
 minc2_spatial=Dict(DIM_X=>1,
                DIM_Y=>2,
                DIM_Z=>3)
 
 """
-map Julia types to minc2 data types
+Low Level: map Julia types to minc2 data types
 """
 julia_to_minc2 = Dict(
     Type{Int8}     => Cint(minc2_simple.MINC2_BYTE ),
@@ -46,12 +46,12 @@ const _minc2_dimension=c"minc2_simple.struct minc2_dimension"
 
 
 """
-map MINC2 types to Julia
+Low Level: map MINC2 types to Julia
 """
 minc2_to_julia=Dict([(j,i) for (i,j) in julia_to_minc2])
 
 """
-minc2_simple API status
+Low Level: minc2_simple API status
 """
 @enum STATUS begin
     # minc2 status
@@ -69,7 +69,7 @@ end
 Base.showerror(io::IO, e::Minc2Error) = print(io,"MINC2:", e.message)
 
 """
-Maro to verify the return code
+Macro to verify the return code
 """
 macro minc2_check( ex ) # STATUS::SUCCESS
     return :($(esc(ex)) == 0 ? $(nothing) : throw( Minc2Error("error")) )
@@ -91,7 +91,7 @@ end
 
 
 """
-Structure describing spatial orientation and sampling  of the minc file 
+Structure describing spatial orientation and sampling of the minc file 
 """
 mutable struct MincHeader
     " Dimensions in voxels"
@@ -109,7 +109,7 @@ mutable struct MincHeader
     axis::Vector{DIM}
 
     """
-    Consrtuct header with given number of dimensions
+    Construct header with given number of dimensions
     """
     function MincHeader(ndim)
         new(zeros(ndim),
@@ -235,7 +235,7 @@ function representation_header(h::VolumeHandle)::MincHeader
 end
 
 """
-return volume on-disk stucture header
+Return volume on-disk stucture header
 """
 function store_header(h::VolumeHandle)::MincHeader
     hdr = MincHeader(ndim(h))
@@ -252,7 +252,7 @@ end
 Allocate empty volume using handle
 return volume, storage header
 """
-function empty_like_minc_volume_raw(h::VolumeHandle, 
+function empty_like_minc_volume_raw( h::VolumeHandle,
         ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader} where {T}
     # TODO: use ImageMetadata to store header contents?
     store_hdr = store_header( h )
@@ -587,21 +587,21 @@ function write_attribute(h::VolumeHandle, group::String, attribute::String, valu
 end
 
 """
-return history string
+Return history string
 """
 function read_history(i::VolumeHandle)::Union{String, Nothing}
     return get_attribute(i, "", "history", default=nothing)
 end
 
 """
-write history string
+Write history string
 """
-function write_history(i::VolumeHandle,history::String)
+function write_history(i::VolumeHandle, history::String)
     write_attribute(i,"","history",history)
 end
 
 """
-convert world coordinates (X,Y,Z) to contignuous voxel indexes (I,J,K) 0-based
+Convert world coordinates (X,Y,Z) to contignuous voxel indexes (I,J,K) 0-based
 """
 function world_to_voxel(h::VolumeHandle, xyz::Vector{Float64})::Vector{Float64}
     # TODO: check input vector size (?)
@@ -612,7 +612,7 @@ function world_to_voxel(h::VolumeHandle, xyz::Vector{Float64})::Vector{Float64}
 end
 
 """
-give AffineTransform for world to voxel transformation based on header
+Give AffineTransform for world to voxel transformation based on header
 """
 function voxel_to_world(hdr::MincHeader)::AffineTransform{Float64}
     rot=zeros(3,3)
@@ -634,14 +634,14 @@ function voxel_to_world(hdr::MincHeader)::AffineTransform{Float64}
 end
 
 """
-give AffineTransform for voxel to world transformation
+Give AffineTransform for voxel to world transformation
 """
 function world_to_voxel(hdr::MincHeader)::AffineTransform{Float64}
     inv(voxel_to_world(hdr))
 end
 
 """
-generate header from the voxel to world transform and volume size
+Generate header from the voxel to world transform and volume size
 """
 function create_header_from_v2w(
         sz, t::AffineTransform{T};
@@ -683,7 +683,7 @@ end
 
 
 """
-convert contignuous 0-based voxel indexes (I,J,K) to world coordinates (X,Y,Z) 0-based
+Convert contignuous 0-based voxel indexes (I,J,K) to world coordinates (X,Y,Z) 0-based
 """
 function voxel_to_world(h::VolumeHandle,ijk::Vector{Float64})::Vector{Float64}
     @assert(length(ijk)==3)
@@ -694,7 +694,7 @@ end
 
 
 """
-write full volume to file, need to provide details of file structure
+Write full volume to file, need to provide details of file structure
 return nothing
 """
 function write_minc_volume_std(path::String, ::Type{Store}, 
@@ -738,7 +738,7 @@ function write_minc_volume_std(path::String, ::Type{Store},
 end
 
 """
-write full volume to file, need to provide details of file structure
+Write full volume to file, need to provide details of file structure
 return nothing
 """
 function write_minc_volume_raw(path::String, ::Type{Store}, 

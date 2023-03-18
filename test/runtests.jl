@@ -1,7 +1,6 @@
 using Test, Minc2
 using StatsBase
 using LinearAlgebra
-#using Random
 
 @testset "Reading 3D volumes" begin
     for i in [

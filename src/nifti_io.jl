@@ -2,6 +2,9 @@ using NIfTI
 using Rotations
 using StaticArrays
 
+"""
+Read Volume3D from .nii or .nii.gz file
+"""
 function read_nifti_volume(fn::AbstractString; store::Type{T}=Float64)::Volume3D{T} where {T}
     ni = niread(fn)
 
@@ -23,6 +26,9 @@ function read_nifti_volume(fn::AbstractString; store::Type{T}=Float64)::Volume3D
 end
 
 
+"""
+Save Volume3D into .nii or .nii.gz file
+"""
 function save_nifti_volume(fn::AbstractString, vol::Volume3D{T}; 
         store::Type{S}=Float32, history=nothing) where {T,S}
     if isnothing(history)
@@ -52,6 +58,7 @@ function save_nifti_volume(fn::AbstractString, vol::Volume3D{T};
     niwrite(fn,ni)
 end
 
+
 """
 Read ANTs style warp transform
 """
@@ -65,6 +72,7 @@ function read_itk_nifti_transform(fn::AbstractString;
     return Minc2.GridTransform(V.v2w, permutedims(dropdims(V.vol, dims=4),(4,1,2,3)))
 end
 
+
 """
 Write ANTs style warp transform
 """
@@ -72,7 +80,6 @@ function write_itk_nifti_transform(fn::AbstractString,
         xfm::Minc2.GridTransform{Float64,T}; store::Type{S}=Float32) where {T,S}
     save_nifti_volume(fn,Volume3D( permutedims(xfm.vector_field[:,:,:,:,:],(2,3,4,5,1)), xfm.voxel_to_world);store)
 end
-
 
 
 """

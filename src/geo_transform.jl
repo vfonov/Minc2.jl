@@ -68,6 +68,19 @@ end
 
 
 """
+Extract voxel to world affine transform from a GridTransform
+"""
+voxel_to_world(grid::GridTransform) = grid.voxel_to_world
+
+
+"""
+Extract world to voxel affine transform from a GridTransform
+"""
+world_to_voxel(grid::GridTransform) = grid.world_to_voxel
+
+
+
+"""
 Constructor from voxel to world transform and a vector field
 """
 function GridTransform(
@@ -98,6 +111,18 @@ struct InverseGridTransform{T,F,VF} <: AnyTransform
     itp_vector_field::VF
 
 end
+
+
+"""
+Extract voxel to world affine transform from a InverseGridTransform
+"""
+voxel_to_world(grid::InverseGridTransform) = grid.voxel_to_world
+
+
+"""
+Extract world to voxel affine transform from a InverseGridTransform
+"""
+world_to_voxel(grid::InverseGridTransform) = grid.world_to_voxel
 
 
 """
@@ -291,10 +316,18 @@ function decompose(rot, shift)
     return start, step, dir_cos
 end
 
+"""
+Decompose affine transform into three components
+start, step, direction cosines
+"""
 function decompose(tfm::AffineTransform{T}) where {T}
     return decompose(tfm.rot, tfm.shift)
 end
 
+"""
+Decompose affine transform into three components
+start, step, direction cosines
+"""
 function decompose(tfm::Matrix{T}) where {T}
     return decompose(tfm[1:3,1:3], tfm[1:3,4])
 end

@@ -1,5 +1,5 @@
 """
-Axis typed from MINC volume, TODO: make this compatible with NIFTI ?
+Low level: transformation types stored in .xfm file
 """
 @enum XFM begin
     MINC2_XFM_LINEAR                 = Cint(minc2_simple.MINC2_XFM_LINEAR)
@@ -11,7 +11,7 @@ end
 
 
 """
-minc2_simple XFM transform handle
+Low level: minc2_simple XFM transform handle
 """
 mutable struct TransformHandle
     x::Ref
@@ -25,7 +25,7 @@ end
 
 
 """
-Open transform xfm file, return handle
+Low level: Open transform xfm file, return handle
 """
 function open_xfm_file(fname::String)::TransformHandle
     h = TransformHandle()
@@ -35,14 +35,14 @@ end
 
 
 """
-Save information into file
+Low level: Save information into file from an open handle
 """
 function save_xfm_file(h::TransformHandle, path::String)
     @minc2_check  minc2_simple.minc2_xfm_save(h.x[],path)
 end
 
 """
-Transform point x,y,z using libminc
+Low level: Transform point x,y,z
 """
 function transform_point(h::TransformHandle, xyz::Vector{Float64})::Vector{Float64}
     xyz_out=zeros(Float64,3)
@@ -51,7 +51,7 @@ function transform_point(h::TransformHandle, xyz::Vector{Float64})::Vector{Float
 end
 
 """
-Inverse transform point x,y,z  using libminc
+Low level: Inverse transform point x,y,z 
 """
 function inverse_transform_point(h::TransformHandle, xyz::Vector{Float64})::Vector{Float64}
     xyz_out=zeros(Float64,3)
@@ -60,14 +60,14 @@ function inverse_transform_point(h::TransformHandle, xyz::Vector{Float64})::Vect
 end
 
 """
-Invert transform
+Low level: Invert transform
 """
 function invert_transform(h::TransformHandle)
     @minc2_check  minc2_simple.minc2_xfm_invert(h.x[])
 end
 
 """
-Get number of transformations
+Low level: Get number of transformations
 """
 function get_n_concat(h::TransformHandle)::Int64
     n = Ref{Int}(0)
@@ -76,7 +76,7 @@ function get_n_concat(h::TransformHandle)::Int64
 end
 
 """
-Get transform type 
+Low level: Get transform type 
 """
 function get_n_type(h::TransformHandle;n::Int64=0)::XFM
     t = Ref{Int}(0)
@@ -84,6 +84,9 @@ function get_n_type(h::TransformHandle;n::Int64=0)::XFM
     return XFM(t[])
 end
 
+"""
+Low level: extract reference to a grid file from open handle
+"""
 function get_grid_transform(h::TransformHandle;n::Int64=0)
     c_file=Ref{c"char *"}()
     inv=Ref{Int}(0)
@@ -96,12 +99,18 @@ function get_grid_transform(h::TransformHandle;n::Int64=0)
     return (r,inv[]!=0)
 end
 
+"""
+Low level: extract AffineTransform{Float64} from open handle
+"""
 function get_linear_transform(h::TransformHandle;n::Int64=0)::AffineTransform{Float64}
     mat=zeros(Float64,4,4)
     @minc2_check minc2_simple.minc2_xfm_get_linear_transform(h.x[], n, Base.unsafe_convert(Ptr{Cdouble},mat))
     return AffineTransform(mat')
 end
 
+"""
+Low level: extacto transformation parameters from affine transform
+"""
 function get_linear_transform_param(h::TransformHandle;n::Int64=0,center::Union{Nothing,Vector{Float64}}=nothing)
     if isnothing(center)
         center=zeros(Float64,3)
@@ -118,7 +127,7 @@ function get_linear_transform_param(h::TransformHandle;n::Int64=0,center::Union{
 end
 
 """
-Append affine transform
+Low level: Append affine transform to an open transformation handle
 """
 function append_linear_transform(h::TransformHandle, lin::AffineTransform)
     mat = Matrix{Float64}( Float64[lin.rot lin.shift;0 0 0 1]')
@@ -127,21 +136,21 @@ function append_linear_transform(h::TransformHandle, lin::AffineTransform)
 end
 
 """
-Append grid transform 
+Low level: Append grid transform  to an open transformation handle
 """
 function append_grid_transform(h::TransformHandle, grid_file::String; inv::Bool=false)
     @minc2_check minc2_simple.minc2_xfm_append_grid_transform(h.x[], grid_file, inv)
 end
 
 """
-
+Low level: concatenate two transfomations
 """
 function concat_xfm(h::TransformHandle, i::TransformHandle)
     @minc2_check minc2_simple.minc2_xfm_concat_xfm(h.x[], i.x[])
 end
 
 """
-High level interface to load complete transform into memory 
+Low level: Load all transforms from open .XFM handle
 """
 function load_transforms(h::TransformHandle)::Vector{AnyTransform}
     r=Vector{AnyTransform}()
@@ -169,14 +178,16 @@ end
 
 
 """
-High level interface to load complete transform into memory 
+Load transformations from .xfm file
 """
 function load_transforms(fname::String)::Vector{AnyTransform} 
     h = Minc2.open_xfm_file(fname)
     load_transforms(h)
 end
 
-
+"""
+Save transformations into .xfm file
+"""
 function save_transforms(fname::String, 
         xfm::Union{Vector{XFM}, XFM};
         grid_store::Type{T}=Float32 ) where {T, XFM<:AnyTransform}
