@@ -14,3 +14,6 @@ Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+NIfTI = "0.5"
