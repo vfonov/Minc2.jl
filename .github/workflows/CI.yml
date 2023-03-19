@@ -33,7 +33,7 @@ jobs:
       - run: |
           julia --project -e '
             using Pkg
-            Pkg.add("https://github.com/vfonov/LIBMINC_jll.jl.git")'
+            Pkg.add(url="https://github.com/vfonov/LIBMINC_jll.jl.git",rev="main")'
       - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
