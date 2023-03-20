@@ -182,17 +182,20 @@ end
 
 @testset "read and write ITK transforms" begin
     mktempdir() do tmp
-        xfm=Minc2.read_itk_txt_transform("input/ants_linear.txt")
+        # linear transform
+        xfm = Minc2.read_itk_txt_transform("input/ants_linear.txt")
         Minc2.write_itk_txt_transform(joinpath(tmp,"test_ants_linear.txt"),xfm)
-        xfm2=Minc2.read_itk_txt_transform(joinpath(tmp,"test_ants_linear.txt"))
+        xfm2 = Minc2.read_itk_txt_transform(joinpath(tmp,"test_ants_linear.txt"))
         @test xfm.rot ≈ xfm2.rot
         @test xfm.shift ≈ xfm2.shift
 
-        grid_xfm=Minc2.read_itk_nifti_transform("input/std_sub-1643254_ses-2_t1w3Warp.nii.gz")
-        Minc2.write_itk_nifti_transform(joinpath(tmp,"test_ants_warp.txt"),grid_xfm)
-        grid2_xfm=Minc2.read_itk_nifti_transform(joinpath(tmp,"test_ants_warp.txt"))
-        @test grid_xfm.voxel_to_world.rot ≈  grid2_xfm.voxel_to_world.rot
-        @test grid_xfm.voxel_to_world.shift ≈  grid2_xfm.voxel_to_world.shift
+        # nonlinear warp
+        grid_xfm = Minc2.read_itk_nifti_transform("input/ADNI_fixed_MNI-ICBM152_moving_setting_is_fastfortesting1Warp.nii.gz")
+        Minc2.write_itk_nifti_transform(joinpath(tmp,"test_ants_warp.nii.gz"),grid_xfm)
+        grid2_xfm = Minc2.read_itk_nifti_transform(joinpath(tmp,"test_ants_warp.nii.gz"))
+
+        @test Minc2.voxel_to_world(grid_xfm).rot   ≈  Minc2.voxel_to_world(grid2_xfm).rot
+        @test Minc2.voxel_to_world(grid_xfm).shift ≈  Minc2.voxel_to_world(grid2_xfm).shift
         @test grid_xfm.vector_field  ≈  grid2_xfm.vector_field
     end
 end
