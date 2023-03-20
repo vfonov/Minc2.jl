@@ -1,0 +1,5 @@
+MNI Transform File
+%ITK-XFM writer
+
+Transform_Type = Grid_Transform;
+Displacement_Volume = test_nonlinear_grid_0.mnc;
