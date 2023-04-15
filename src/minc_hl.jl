@@ -146,7 +146,7 @@ function resample_grid_volume!(
         dst  = transform_point(itfm, orig; ftol, max_iter )
         dst_v= transform_point(w2v, dst ) .+ 1.0
 
-        for i in eachindex(size(out_vol)[1])
+        for i in eachindex(view(out_vol,:,1,1,1))
             @inbounds out_vol[i,c] = in_vol_itp(i, dst_v...)
         end
     end
