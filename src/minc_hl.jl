@@ -30,6 +30,14 @@ end
 
 
 """
+Extract underlying plain array
+"""
+array(vol::Volume3D) = vol.vol
+
+
+
+
+"""
 Create Volume3D from an array and affine transform
 """
 function Volume3D(vol::Array{T,N}, v2w::AffineTransform{Float64}; 

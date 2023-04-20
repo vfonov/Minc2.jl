@@ -78,6 +78,11 @@ Extract world to voxel affine transform from a GridTransform
 """
 world_to_voxel(grid::GridTransform) = grid.world_to_voxel
 
+"""
+Extract underlying plain array
+"""
+array(grid::GridTransform) = grid.vector_field
+
 
 
 """
@@ -123,6 +128,12 @@ voxel_to_world(grid::InverseGridTransform) = grid.voxel_to_world
 Extract world to voxel affine transform from a InverseGridTransform
 """
 world_to_voxel(grid::InverseGridTransform) = grid.world_to_voxel
+
+
+"""
+Extract underlying plain array
+"""
+array(grid::InverseGridTransform) = grid.vector_field
 
 
 """
@@ -323,6 +334,7 @@ start, step, direction cosines
 function decompose(tfm::AffineTransform{T}) where {T}
     return decompose(tfm.rot, tfm.shift)
 end
+
 
 """
 Decompose affine transform into three components
