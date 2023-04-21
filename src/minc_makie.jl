@@ -33,8 +33,8 @@ function draw_outline_with_labels(layout, anat, seg; labels)
     nslices=4
     for ax in 1:3, s in 1:nslices
         mask_s = selectdim(relabel_seg, ax, fld1(sz[ax]*s,nslices+1))
-        anat_s = selectdim(array(anat),ax, fld1(sz[ax]*s,nslices+1)) 
-        (w,h) = size(anat_s)
+        anat_s = selectdim(array(anat), ax, fld1(sz[ax]*s,nslices+1)) 
+        (w,h)  = size(anat_s)
         b1a = Makie.Axis(gc[ax,s]; width=w, height=h, aopt...)
         Makie.hidedecorations!(b1a, grid = false)
 
@@ -47,8 +47,8 @@ function draw_outline_with_labels(layout, anat, seg; labels)
     Makie.tightlimits!.(baxs)
     #colsize!(gc, 1, Aspect(1, 1.0))
     #colsize!(gc, 2, Aspect(1, 1.0))
-
-    Makie.Colorbar( gc[4,:], colormap=colors, 
+    # add color bar
+    Makie.Colorbar( gc[:,nslices+1], colormap=colors, 
              limits = (1, length(labels)+1),
              ticks=   (collect(1:length(labels)) .+ 0.5, collect(values(labels))))
 
