@@ -10,7 +10,7 @@ seg=Minc2.read_volume("/data/data01/vfonov/models/icbm152_model_09c/mni_icbm152_
 fig = Figure()
 gc = fig[1, 1] = GridLayout()
 
-Minc2.draw_outline_with_labels(gc,anat,seg,labels=Dict([1=>"CSF",2=>"GM",3=>"WM"]))
+Minc2.draw_outline_with_labels(gc, anat, seg, labels=Dict([1=>"CSF",2=>"GM",3=>"WM"]))
 resize_to_layout!(fig)
 
 

@@ -48,8 +48,9 @@ function draw_outline_with_labels(layout, anat, seg; labels)
     #colsize!(gc, 1, Aspect(1, 1.0))
     #colsize!(gc, 2, Aspect(1, 1.0))
 
-    Makie.Colorbar(gc[4,:], colormap=colors, limits = (1, length(keys(labels))+1),
-            ticks=(collect(keys(labels)).+0.5, collect(values(labels))))
+    Makie.Colorbar( gc[4,:], colormap=colors, 
+             limits = (1, length(labels)+1),
+             ticks=   (collect(1:length(labels)) .+ 0.5, collect(values(labels))))
 
     Makie.colgap!(gc, 0)
     Makie.rowgap!(gc, 0)
