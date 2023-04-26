@@ -69,9 +69,10 @@ function draw_outline_with_heatmap(layout, anat, heat;
     sz = size(array(anat))
     w = max(sz...)
 
-    if heat_limits is nothing
+    if isnothing(heat_limits)
         heat_limits = extrema(array(heat))
-
+    end
+    
     # TODO: generate labels
     # TODO: add implicit background label (0)
     colors = Makie.cgrad(cmap, length(labels), categorical = true)
