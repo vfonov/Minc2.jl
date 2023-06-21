@@ -25,7 +25,7 @@ Extract world to voxel affine transform from a Volume3D
 """
 function world_to_voxel(vol::Volume3D)
     v2w=voxel_to_world(vol)
-    return Base.inv(v2w)
+    return inv(v2w)
 end
 
 
