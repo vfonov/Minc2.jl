@@ -16,10 +16,10 @@ Low level: minc2_simple XFM transform handle
 mutable struct TransformHandle
     x::Ref
     function TransformHandle()
-    ret = new( Ref(minc2_simple.minc2_xfm_allocate0()) )
+        ret = new( Ref(minc2_simple.minc2_xfm_allocate0()) )
 
-    finalizer(x -> c"minc2_simple.minc2_xfm_destroy"(x[]), ret.x)
-    return ret
+        finalizer(x -> c"minc2_simple.minc2_xfm_destroy"(x[]), ret.x)
+        return ret
     end
 end
 
@@ -182,7 +182,9 @@ Load transformations from .xfm file
 """
 function load_transforms(fname::String)::Vector{AnyTransform} 
     h = Minc2.open_xfm_file(fname)
-    load_transforms(h)
+    tfm=load_transforms(h)
+    finalize(h)
+    return tfm
 end
 
 """
@@ -228,4 +230,5 @@ function save_transforms(fname::String,
         end 
     end
     save_xfm_file(h,fname)
+    finalize(h)
 end 

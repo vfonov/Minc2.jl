@@ -29,12 +29,14 @@ julia_to_minc2 = Dict(
     Type{Int8}     => Cint(minc2_simple.MINC2_BYTE ),
     Type{Int16}    => Cint(minc2_simple.MINC2_SHORT),
     Type{Int32}    => Cint(minc2_simple.MINC2_INT ),
+    #Type{Int64}    => Cint(minc2_simple.MINC2_LONG ),
     Type{Float32}  => Cint(minc2_simple.MINC2_FLOAT ),
     Type{Float64}  => Cint(minc2_simple.MINC2_DOUBLE ),
     Type{String}   => Cint(minc2_simple.MINC2_STRING ),
     Type{UInt8}    => Cint(minc2_simple.MINC2_UBYTE ),
     Type{UInt16}   => Cint(minc2_simple.MINC2_USHORT ),
     Type{UInt32}   => Cint(minc2_simple.MINC2_UINT ),
+    #Type{UInt64}   => Cint(minc2_simple.MINC2_ULONG ),
     Type{Complex{Int16}} => Cint(minc2_simple.MINC2_SCOMPLEX ),
     Type{Complex{Int32}} => Cint(minc2_simple.MINC2_ICOMPLEX ),
     Type{Complex{Float32}} => Cint(minc2_simple.MINC2_FCOMPLEX ),
@@ -81,10 +83,10 @@ minc2_simple volume handle
 mutable struct VolumeHandle
     x::Ref
     function VolumeHandle()
-    ret = new( Ref(minc2_simple.minc2_allocate0()) )
+        ret = new( Ref(minc2_simple.minc2_allocate0()) )
 
-    finalizer(x -> c"minc2_simple.minc2_destroy"(x[]), ret.x)
-    return ret
+        finalizer(x -> c"minc2_simple.minc2_destroy"(x[]), ret.x)
+        return ret
     end
 end
 
@@ -316,7 +318,7 @@ function empty_like_minc_volume_std(path::String,
     handle = open_minc_file(path)
     volume, hdr, store_hdr = empty_like_minc_volume_std(handle,T)
     close_minc_file(handle)
-
+    finalize(handle)
     return volume, hdr, store_hdr
 end
 
@@ -329,7 +331,7 @@ function empty_like_minc_volume_std_history(path::String, ::Type{T}=Float32 ) wh
     volume, hdr, store_hdr = empty_like_minc_volume_std(handle,T)
     history = read_history(handle)
     close_minc_file(handle)
-
+    finalize(handle)
     return volume, hdr, store_hdr, history
 end
 
@@ -343,7 +345,7 @@ function read_minc_volume_std(path::String, ::Type{T}=Float32 )::
     handle = open_minc_file(path)
     volume, hdr, store_hdr = read_minc_volume_std(handle,T)
     close_minc_file(handle)
-
+    finalize(handle)
     return volume, hdr, store_hdr
 end
 
@@ -358,7 +360,7 @@ function read_minc_volume_std_history(path::String, ::Type{T}=Float32 )::
     volume, hdr, store_hdr = read_minc_volume_std(handle,T)
     history = read_history(handle)
     close_minc_file(handle)
-
+    finalize(handle)
     return volume, hdr, store_hdr, history
 end
 
@@ -372,7 +374,7 @@ function empty_like_minc_volume_raw(path::String, ::Type{T}=Float32 )::Tuple{Arr
     handle = open_minc_file(path)
     volume, store_hdr = empty_like_minc_volume_raw(handle,T)
     close_minc_file(handle)
-
+    finalize(handle)
     return volume, store_hdr
 end
 
@@ -385,7 +387,7 @@ function read_minc_volume_raw(path::String, ::Type{T}=Float32 )::Tuple{Array{T},
     handle = open_minc_file(path)
     volume, store_hdr = read_minc_volume_raw(handle,T)
     close_minc_file(handle)
-
+    finalize(handle)
     return volume, store_hdr
 end
 
@@ -398,7 +400,7 @@ function read_minc_volume_raw_history(path::String, ::Type{T}=Float32 ) where {T
     volume, store_hdr = read_minc_volume_raw(handle,T)
     history = read_history(h)
     close_minc_file(handle)
-
+    finalize(handle)
     return volume, store_hdr, history
 end
 
@@ -733,6 +735,7 @@ function write_minc_volume_std(path::String, ::Type{Store},
         close_minc_file(in_h)
         close_minc_file(handle)
     end
+    finalize(handle)
 
     return nothing
 end
@@ -777,7 +780,7 @@ function write_minc_volume_raw(path::String, ::Type{Store},
         close_minc_file(in_h)
         close_minc_file(handle)
     end
-
+    finalize(handle)
     return nothing
 end
 
