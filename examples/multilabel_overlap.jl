@@ -43,9 +43,10 @@ cseg=map(x->remap_fw[x],seg)
 #maj=mode.(splitdimsview(cseg,(1,2,3)))
 
 
-function gen_ovl(arr)
+function gen_ovl(arr,nlab_)
+    # discrete version of the formula from http://dx.doi.org/10.1109/TMI.2006.880587
     N=length(arr)
-    cts=[count(==(element),arr) for element in 0:nlab-1 ]
+    cts=[count(==(element),arr) for element in 0:nlab_ ]
     U=sum(j->N*(N-1)/2-(N-j)*(N-j-1)/2, cts)
     I=sum(j->j*(j-1)/2, cts)
     L=argmax(cts)-1
@@ -53,33 +54,29 @@ function gen_ovl(arr)
     return I,U,L
 end
 
-function gen_ovl_nz(arr)
+function gen_ovl_nz(arr,nlab_)
+    # discrete version of the formula from http://dx.doi.org/10.1109/TMI.2006.880587
     N=length(arr)
-    cts=[count(==(element),arr) for element in 1:nlab-1 ]
+    cts=[count(==(element),arr) for element in 1:nlab_ ]
     U=sum(j->N*(N-1)/2-(N-j)*(N-j-1)/2, cts)
     I=sum(j->j*(j-1)/2, cts)
 
-    
     L=U>0 ? argmax(cts) : 0 # deal with voxels where evything is bg 
-
 
     return I,U,L
 end
 
 
 if args["bg"]
-    I,U,maj=invert(gen_ovl.(splitdimsview(cseg,(1,2,3))))
+    I,U,maj=invert(gen_ovl.(splitdimsview(cseg,(1,2,3)),nlab))
 else
-    I,U,maj=invert(gen_ovl_nz.(splitdimsview(cseg,(1,2,3))))
+    I,U,maj=invert(gen_ovl_nz.(splitdimsview(cseg,(1,2,3)),nlab))
 end
 
 if !isnothing(args["maj"])
     omaj=map(x->remap_bw[x],maj)
     Minc2.save_volume(args["maj"],Minc2.Volume3D(omaj,Minc2.voxel_to_world(ref)),store=UInt8)
 end
-
-
-@show eltype(maj)
 
 
 if !isnothing(args["ovl"])
