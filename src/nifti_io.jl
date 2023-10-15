@@ -2,6 +2,31 @@ using NIfTI
 using Rotations
 using StaticArrays
 
+
+"""
+Convert coordinates from LPS to RAS
+"""
+function lps_to_ras(xfm::Minc2.AffineTransform)
+    # convert from LPS to RAS
+    # see
+    rot=copy(xfm.rot)
+    shift=copy(xfm.shift)
+    rot[1:3,1:2] .= rot[1:3,1:2] .* -1.0
+    shift[1:2]   .= tfm[1:2]   .* -1.0
+
+    out=Minc2.AffineTransform(rot, shift)
+end
+
+
+"""
+Convert coordinates from LPS to RAS
+"""
+function lps_to_ras(vol::Volume3D{T})::Volume3D{T} where {T}
+    Minc2.Volume3D(vol.vol, lps_to_ras(vol.v2w), vol.history)
+end
+
+
+
 """
 Read Volume3D from .nii or .nii.gz file
 """
