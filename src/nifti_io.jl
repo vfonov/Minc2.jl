@@ -9,22 +9,16 @@ Convert coordinates from LPS to RAS
 function lps_to_ras(xfm::Minc2.AffineTransform)
     # convert from LPS to RAS
     # see
-    rot=copy(xfm.rot)
-    shift=copy(xfm.shift)
-    rot[1:3,1:2] .= rot[1:3,1:2] .* -1.0
-    shift[1:2]   .= tfm[1:2]   .* -1.0
-
-    out=Minc2.AffineTransform(rot, shift)
+    lps_to_ras_m = SMatrix{3,3,Float64}([-1 0 0; 0 -1 0; 0 0 1])
+    out=Minc2.AffineTransform(lps_to_ras_m*xfm.rot, lps_to_ras_m*xfm.shift)
 end
-
 
 """
 Convert coordinates from LPS to RAS
 """
-function lps_to_ras(vol::Volume3D{T})::Volume3D{T} where {T}
+function lps_to_ras(vol::Minc2.Volume3D{T})::Minc2.Volume3D{T} where {T}
     Minc2.Volume3D(vol.vol, lps_to_ras(vol.v2w), vol.history)
 end
-
 
 
 """
