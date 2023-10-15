@@ -136,15 +136,15 @@ Resample 4D array using transformation,
 assume 1st dimension is non spatial (vector dimension)
 """
 function resample_grid_volume!(
-        in_vol::Array{T,4},
-        out_vol::Array{T,4},
+        in_vol::AbstractArray{T,4},
+        out_vol::AbstractArray{T,4},
         v2w::AffineTransform{C}, 
         w2v::AffineTransform{C}, 
         itfm::Union{Vector{XFM}, XFM};
         interp::I=BSpline(Quadratic(Line(OnCell()))),
         fill=0.0,
         ftol=1.0/80,
-        max_iter=10)::Array{T,4} where {T, C, I, XFM<:AnyTransform}
+        max_iter=10)::AbstractArray{T,4} where {T, C, I, XFM<:AnyTransform}
 
     # NEED to interpolate only over spatial dimensions
     in_vol_itp = extrapolate( interpolate( in_vol, (NoInterp(), interp, interp, interp)), fill)
@@ -190,9 +190,9 @@ into vector field
 """
 function tfm_to_grid!(
         tfm::Union{Vector{XFM}, XFM}, 
-        grid::Array{T,4},
+        grid::AbstractArray{T,4},
         v2w::AffineTransform{C};
-        ftol=1.0/80,max_iter=10)::Array{T,4} where {T, C, XFM<:AnyTransform}
+        ftol=1.0/80,max_iter=10)::AbstractArray{T,4} where {T, C, XFM<:AnyTransform}
     
     @simd for c in CartesianIndices(size(grid)[2:end])
         orig = transform_point(v2w, c )
@@ -262,8 +262,8 @@ end
 """
 Resample 3D array using transformation 
 """
-function resample_volume!(in_vol::Array{T,3}, 
-        out_vol::Array{T,3}, 
+function resample_volume!(in_vol::AbstractArray{T,3}, 
+        out_vol::AbstractArray{T,3}, 
         v2w::AffineTransform{C}, 
         w2v::AffineTransform{C}, 
         itfm::Union{Vector{XFM},XFM};
@@ -402,7 +402,7 @@ Calculate dense jacobian determinant field for an arbitrary transformation
 """
 function calculate_jacobian!(
         tfm::Union{Vector{XFM},XFM},
-        out_vol::Array{T,3},
+        out_vol::AbstractArray{T,3},
         out_v2w::AffineTransform{C};
         interp::I=BSpline(Quadratic(Line(OnCell()))),
         ftol=1.0/80,
