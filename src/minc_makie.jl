@@ -1,7 +1,13 @@
 ##### visualization helpers
 
-function draw_outline_with_labels(layout, anat, seg; 
-        labels, cmap=:rainbow,levels=[20,30],show_colorbar=true)
+function draw_outline_with_labels(
+        layout, 
+        anat, 
+        seg; 
+        labels, 
+        cmap=:rainbow,
+        levels=[20,30],
+        show_colorbar=true)
     
     sz = size(array(anat))
     w = max(sz...)
@@ -9,7 +15,6 @@ function draw_outline_with_labels(layout, anat, seg;
     relabel=Dict( collect(keys(labels)) .=>  1:length(labels)  )
     # relabel segmentation
     relabel_seg=map(x->x in keys(labels) ? relabel[x] : 0 , array(seg))
-
     
     # TODO: generate labels
     # TODO: add implicit background label (0)
@@ -62,7 +67,8 @@ end
 
 
 
-function draw_outline_with_heatmap(layout, anat, heat; 
+function draw_outline_with_heatmap(
+    layout, anat, heat; 
     labels, cmap=:rainbow, levels=[20,40],
     heat_limits=nothing, show_colorbar=true)
 

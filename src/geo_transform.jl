@@ -1,3 +1,5 @@
+# Geometric transformations functions
+
 # for Affine transforms
 using LinearAlgebra
 
@@ -31,25 +33,32 @@ end
 
 
 """
-Affine transform
+Affine transform, described by rotation matrix and shift vector
 """
 struct AffineTransform{T} <: AnyTransform
     rot::SMatrix{3,3,T,9}
     shift::SVector{3,T}
 end
 
-# default transform is identity
+"""
+Create identity transform
+"""
 function AffineTransform(::Type{T}=Float64) where {T}
     return AffineTransform( SMatrix{3,3,T,9}( [1 0 0 ;0 1 0 ;0 0 1 ]), 
                              SVector{3,T}( [0,0,0] ) )
  end
 
+"""
+Create affine transform from a matrix-like object  (4x4 or 3x4)
+"""
 function AffineTransform(mat) 
     ind = SA[1, 2, 3]
     return AffineTransform(mat[ind, ind], mat[ind, 4])
 end
 
-
+"""
+Create affine transform from rotation matrix-like object (3x3) and shift vector-like object (3)
+"""
 function AffineTransform(rot, shift)
      ind = SA[1, 2, 3]
      return AffineTransform(rot[ind, ind], shift[ind])
@@ -68,17 +77,23 @@ end
 
 
 """
+    voxel_to_world(grid::GridTransform)
+
 Extract voxel to world affine transform from a GridTransform
 """
 voxel_to_world(grid::GridTransform) = grid.voxel_to_world
 
 
 """
+    world_to_voxel(grid::GridTransform)
+
 Extract world to voxel affine transform from a GridTransform
 """
 world_to_voxel(grid::GridTransform) = grid.world_to_voxel
 
 """
+    array(grid::GridTransform)
+ 
 Extract underlying plain array
 """
 array(grid::GridTransform) = grid.vector_field
@@ -86,7 +101,7 @@ array(grid::GridTransform) = grid.vector_field
 
 
 """
-Constructor from voxel to world transform and a vector field
+Construct GridTransform from voxel to world transform and a vector field
 """
 function GridTransform(
     voxel_to_world::AffineTransform{T},
@@ -99,6 +114,9 @@ function GridTransform(
 end
 
 
+"""
+Construct empty GridTransform, which should generate identity transform
+"""
 function GridTransform(::Type{T}=Float64,::Type{F}=Float64) where {T,F}
     GridTransform(
         AffineTransform(T),
@@ -107,7 +125,7 @@ function GridTransform(::Type{T}=Float64,::Type{F}=Float64) where {T,F}
 end
 
 """
-Dense vector field transform (grid transform) used in inverse
+Dense vector field transform (GridTransform) used in inverse
 """
 struct InverseGridTransform{T,F,VF} <: AnyTransform
     voxel_to_world::AffineTransform{T}
@@ -137,8 +155,8 @@ array(grid::InverseGridTransform) = grid.vector_field
 
 
 """
-Constructor from voxel to world transform
-and a vector field
+Construct `InverseGridTransform` from voxel to world transform
+    and a vector field
 """
 function InverseGridTransform(
     voxel_to_world::AffineTransform{T},
@@ -149,7 +167,9 @@ function InverseGridTransform(
             Flat()))
 end
 
-
+"""
+Construct `InverseGridTransform` empty transform
+"""
 function InverseGridTransform(::Type{T}=Float64,::Type{F}=Float64) where {T,F}
     InverseGridTransform(
         AffineTransform(T),
@@ -159,7 +179,7 @@ end
 
 
 """
-AnyTransform
+Concatenated transforms
 """
 GeoTransforms=Vector{AnyTransform}
 
@@ -179,12 +199,14 @@ function inv(t::AffineTransform{T})::AffineTransform{T} where {T}
     AffineTransform(Base.inv( SMatrix{4,4,T,16}([t.rot t.shift;0 0 0 1]) ))
 end
 
+
 """
 Invert GridTransform transform
 """
 function inv(t::GridTransform{T,F,VF})::InverseGridTransform{T,F,VF} where {T,F,VF}
     InverseGridTransform( t.voxel_to_world, t.vector_field)
 end
+
 
 """
 Invert InverseGridTransform transform
@@ -203,7 +225,7 @@ end
 
 
 """
-Apply affine transform
+Apply affine transform to a point
 """
 @inline function transform_point(
         tfm::AffineTransform{T}, 
@@ -213,8 +235,9 @@ Apply affine transform
     return (p' * tfm.rot)' + tfm.shift
 end
 
+
 """
-Support function
+Internal support function
 """
 @inline function interpolate_field(
         v2w::AffineTransform{T},
@@ -227,14 +250,16 @@ Support function
                         itp_vector_field(3,v...) )
 end
 
+
 """
-Apply forward grid transform
+Apply forward grid transform to a point
 """
 @inline function transform_point(
         tfm::GridTransform{T,F}, p::SVector{3,T};
         _whatever...)::SVector{3,T} where {T,F}
     return p + interpolate_field(tfm.world_to_voxel, tfm.itp_vector_field, p)
 end
+
 
 """
 Apply inverse grid transform
@@ -267,7 +292,7 @@ end
 
 
 """
-Apply concatenated transform
+Apply concatenated transform to a point
 """
 @inline function transform_point(
         tfm::Vector{XFM},
@@ -327,6 +352,7 @@ function decompose(rot, shift)
     return start, step, dir_cos
 end
 
+
 """
 Decompose affine transform into three components
 start, step, direction cosines
@@ -345,10 +371,16 @@ function decompose(tfm::Matrix{T}) where {T}
 end
 
 
-# helper 
+# helper
+"""
+Print summary information about grid transform
+"""
 Base.show(io::IO, z::GridTransform{T,F,I}) where {T,F,I} = print(io, "GridTransform{$(T),$(F),...}:", size(z.vector_field))
 
 # helper 
+"""
+Print summary information about grid transform
+"""
 Base.show(io::IO, z::InverseGridTransform{T,F,I})  where {T,F,I} = print(io, "InverseGridTransform{$(T),$(F),...}:", size(z.vector_field))
 
 

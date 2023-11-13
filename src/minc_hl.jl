@@ -111,6 +111,7 @@ function empty_volume_like(
     return Volume3D(out_vol, vol.v2w, isnothing(history) ? vol.history : history )
 end
 
+
 """
 Save Volume3D to minc file
 """
@@ -333,6 +334,7 @@ function resample_volume!(
     return out_vol
 end
 
+
 """
 Resample Volume3D using transformation 
 """
@@ -357,6 +359,7 @@ end
 """
 Reshape Volume3D
 Work in progress
+DO NOT USE
 """
 function reshape_volume(
         in_vol::Volume3D{T,N};
@@ -367,8 +370,8 @@ function reshape_volume(
     if !isnothing(dimrange)
         @assert ndims(in_vol.vol) == length(dimrange) "Unequal dimrange size"
 
-        new_sz    = [ sz[j] + -i[1]+i[2]                           for (j,i) in enumerate(dimrange)]
-        in_range  = [(max(i[1]+1,1) : min(i[2]+sz[j],     sz[j])) for (j,i) in enumerate(dimrange)]
+        new_sz    = [ sz[j] + -i[1]+i[2]                              for (j,i) in enumerate(dimrange)]
+        in_range  = [(max(i[1]+1,1) : min(i[2]+sz[j],     sz[j]))     for (j,i) in enumerate(dimrange)]
         out_range = [(max(-i[1]+1,1): min(-i[2]+new_sz[j],new_sz[j])) for (j,i) in enumerate(dimrange)]
     else
         new_sz = sz
@@ -381,19 +384,19 @@ function reshape_volume(
     else
         shift=0
     end
-
+    old_v2w = voxel_to_world(in_vol)
     #start,step,dir_cos = decompose(in_vol.v2w)
-    new_start = transform_point(in_vol.v2w, SVector{3,Float64}( [dimrange[i+shift][1] for i in 1:(N-shift)]))
-    old_start = transform_point(in_vol.v2w, SVector{3,Float64}( [0.0,0.0,0.0] ) )
+    new_start = transform_point(old_v2w, SVector{3,Float64}( [dimrange[i+shift][1] for i in 1:(N-shift)]))
+    old_start = transform_point(old_v2w, SVector{3,Float64}( [0.0,0.0,0.0] ) )
 
-    shift = new_start-old_start
+    coord_shift = new_start-old_start
     out_array = fill(fill_val, new_sz...)
 
     @info "new" out_range,in_range
 
     out_array[out_range...] .= in_vol.vol[in_range...]
 
-    return Volume3D(out_array, AffineTransform(in_vol.v2w.rot,in_vol.v2w.shift+shift))
+    return Volume3D(out_array, AffineTransform(old_v2w.rot, old_v2w.shift+coord_shift))
 end
 
 
@@ -448,6 +451,7 @@ function calculate_jacobian!(
     calculate_jacobian!(tfm, out_vol.vol,out_vol.v2w;interp,ftol,max_iter) 
     return out_vol
 end
+
 
 """
 Generate minc-style history from program args

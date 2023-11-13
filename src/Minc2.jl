@@ -1,3 +1,8 @@
+"""
+Collection of methods for reading and writing MINC2 files,
+    and for reading and writing .xfm files.
+    and operations on 3D volumes
+"""
 module Minc2
 
 # only needed for world_to_voxel, matrix inversion
@@ -5,9 +10,8 @@ module Minc2
 using LinearAlgebra
 using Requires
 
-# geometric trasnsformation functions
+# geometric transformation functions
 include("geo_transform.jl")
-
 # low level C-library interfaces to libminc
 include("minc2_simple.jl")
 # low level functions for interfacing with minc files
@@ -16,7 +20,6 @@ include("minc2_io.jl")
 include("xfm_io.jl")
 # high level functions
 include("minc_hl.jl")
-
 # ITK and NIFTI interface
 include("nifti_io.jl")
 
