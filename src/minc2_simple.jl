@@ -1,7 +1,7 @@
 # interface with minc2-simple C library
 # linked with libminc 
-
 module minc2_simple
+
 using libminc_jll
 using CBinding
 
