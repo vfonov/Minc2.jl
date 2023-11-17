@@ -10,12 +10,13 @@ Manipulations with volumes
 ### Read a 3D minc volume, calculate mean value
 
 Minc command: 
-``` > mincstats -mean mni_icbm152_t1_tal_nlin_sym_09c.mnc
+```Shell 
+> mincstats -mean mni_icbm152_t1_tal_nlin_sym_09c.mnc
 Mean:              29.61005195
 ```
 
 Julia version:
-```
+```julia
 using Minc2
 using StatsBase
 
@@ -29,7 +30,7 @@ Output `mean(Minc2.array(icbm)) = 29.61005194874031`
 
 ### Read a 3D volume with real values, and another one with mask labels and show statistics per label
 
-```
+```julia
 using Minc2
 using StatsBase
 
@@ -53,7 +54,7 @@ WM:84.74593912912998
 ### Apply transformation stored in .xfm file to a minc volume, save result
 
 to create transformation:`param2xfm -rotations 30 0 0 rotate.xfm`
-```
+```julia
 using Minc2
 
 # read T1w scan
@@ -72,7 +73,7 @@ Minc2.save_volume("transformed_icbm.mnc",transformed_icbm, store=UInt16, history
 ```
 
 ### Integrate jacobians per ROI, based on a transformation in .xfm file
-```
+```julia
 using Minc2
 
 # read ROI labels
