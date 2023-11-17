@@ -101,6 +101,10 @@ array(grid::GridTransform) = grid.vector_field
 
 
 """
+    GridTransform(
+        voxel_to_world::AffineTransform{T},
+        vector_field::Array{F, 4})
+
 Construct GridTransform from voxel to world transform and a vector field
 """
 function GridTransform(
@@ -115,6 +119,8 @@ end
 
 
 """
+    GridTransform(::Type{T}=Float64,::Type{F}=Float64)
+
 Construct empty GridTransform, which should generate identity transform
 """
 function GridTransform(::Type{T}=Float64,::Type{F}=Float64) where {T,F}
@@ -125,6 +131,8 @@ function GridTransform(::Type{T}=Float64,::Type{F}=Float64) where {T,F}
 end
 
 """
+    struct InverseGridTransform{T,F,VF} <: AnyTransform
+    
 Dense vector field transform (GridTransform) used in inverse
 """
 struct InverseGridTransform{T,F,VF} <: AnyTransform
@@ -137,24 +145,34 @@ end
 
 
 """
+    voxel_to_world(grid::InverseGridTransform)
+
 Extract voxel to world affine transform from a InverseGridTransform
 """
 voxel_to_world(grid::InverseGridTransform) = grid.voxel_to_world
 
 
 """
+    world_to_voxel(grid::InverseGridTransform)
+
 Extract world to voxel affine transform from a InverseGridTransform
 """
 world_to_voxel(grid::InverseGridTransform) = grid.world_to_voxel
 
 
 """
+    array(grid::InverseGridTransform)
+
 Extract underlying plain array
 """
 array(grid::InverseGridTransform) = grid.vector_field
 
 
 """
+    InverseGridTransform(
+        voxel_to_world::AffineTransform{T},
+        vector_field::Array{F, 4})
+
 Construct `InverseGridTransform` from voxel to world transform
     and a vector field
 """
@@ -168,6 +186,8 @@ function InverseGridTransform(
 end
 
 """
+    InverseGridTransform(::Type{T}=Float64,::Type{F}=Float64)
+
 Construct `InverseGridTransform` empty transform
 """
 function InverseGridTransform(::Type{T}=Float64,::Type{F}=Float64) where {T,F}
@@ -185,6 +205,8 @@ GeoTransforms=Vector{AnyTransform}
 
 
 """
+    inv(::IdentityTransform)::IdentityTransform
+
 Invert IdentityTransform transform
 """
 function inv(::IdentityTransform)::IdentityTransform
@@ -193,6 +215,8 @@ end
 
 
 """
+    inv(t::AffineTransform{T})::AffineTransform{T}
+
 Invert AffineTransform transform
 """
 function inv(t::AffineTransform{T})::AffineTransform{T} where {T}
@@ -201,6 +225,8 @@ end
 
 
 """
+    inv(t::GridTransform{T,F,VF})::InverseGridTransform{T,F,VF}
+
 Invert GridTransform transform
 """
 function inv(t::GridTransform{T,F,VF})::InverseGridTransform{T,F,VF} where {T,F,VF}
@@ -209,6 +235,8 @@ end
 
 
 """
+    inv(t::InverseGridTransform{T,F,VF})::GridTransform{T,F,VF}
+
 Invert InverseGridTransform transform
 """
 function inv(t::InverseGridTransform{T,F,VF})::GridTransform{T,F,VF} where {T,F,VF}
@@ -217,6 +245,8 @@ end
 
 
 """
+    inv(t::Vector{T})::Vector{AnyTransform}
+
 Invert concatenated transform
 """
 function inv(t::Vector{T})::Vector{AnyTransform} where T<:AnyTransform
@@ -225,6 +255,11 @@ end
 
 
 """
+    transform_point(
+            tfm::AffineTransform{T}, 
+            p::SVector{3,T};
+            _whatever...)::SVector{3,T}
+
 Apply affine transform to a point
 """
 @inline function transform_point(
@@ -237,6 +272,11 @@ end
 
 
 """
+    interpolate_field(
+            v2w::AffineTransform{T},
+            itp_vector_field::I, 
+            p::SVector{3,T} )::SVector{3,T}
+
 Internal support function
 """
 @inline function interpolate_field(
@@ -252,6 +292,10 @@ end
 
 
 """
+    transform_point(
+            tfm::GridTransform{T,F}, p::SVector{3,T};
+            _whatever...)::SVector{3,T} where {T,F}
+
 Apply forward grid transform to a point
 """
 @inline function transform_point(
@@ -262,6 +306,11 @@ end
 
 
 """
+    transform_point(
+        tfm::AffineTransform{T}, 
+        p::CartesianIndex{3};
+        _whatever...)::SVector{3,T}
+
 Apply inverse grid transform
 reimplements algorithm from MNI_formats/grid_transforms.c:grid_inverse_transform_point
 """
@@ -292,6 +341,12 @@ end
 
 
 """
+    transform_point(
+        tfm::Vector{XFM},
+        p::SVector{3,T};
+        max_iter::Int=10,
+        ftol::Float64=1.0/80)::SVector{3,T}
+
 Apply concatenated transform to a point
 """
 @inline function transform_point(
@@ -326,6 +381,12 @@ end
 
 
 """
+    transform_point(
+        tfm::AffineTransform{T}, 
+        p::CartesianIndex{3};
+        _whatever...)::SVector{3,T}
+
+
 Apply affine transform to CartesianIndices
 """
 @inline function transform_point(
@@ -337,7 +398,9 @@ end
 
 
 """
-Decompose affine transform into three components
+   decompose(rot, shift)
+
+Decompose affine transform specified as rotation matrix ans shift vector into three components
 start, step, direction cosines
 """
 function decompose(rot, shift)
@@ -354,6 +417,8 @@ end
 
 
 """
+    decompose(tfm::AffineTransform{T})
+
 Decompose affine transform into three components
 start, step, direction cosines
 """
@@ -363,6 +428,8 @@ end
 
 
 """
+    decompose(tfm::Matrix{T})
+
 Decompose affine transform into three components
 start, step, direction cosines
 """

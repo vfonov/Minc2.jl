@@ -10,7 +10,7 @@ Manipulations with volumes
 ### Read a 3D minc volume, calculate mean value
 
 Minc command: 
-```Shell 
+```Shell
 > mincstats -mean mni_icbm152_t1_tal_nlin_sym_09c.mnc
 Mean:              29.61005195
 ```
@@ -73,6 +73,7 @@ Minc2.save_volume("transformed_icbm.mnc",transformed_icbm, store=UInt16, history
 ```
 
 ### Integrate jacobians per ROI, based on a transformation in .xfm file
+
 ```julia
 using Minc2
 
@@ -98,6 +99,19 @@ for (i,l) in [1=>"ROI-1",2=>"ROI-2",3=>"ROI-3"]
 end
 ```
 
+### Graphic examples, show MNI-ICBM152 template contours with tissue masks overlays
+
+```julia
+using CairoMakie
+using Minc2
+
+# read T1w scan
+icbm=Minc2.read_volume("mni_icbm152_t1_tal_nlin_sym_09c.mnc", store=Float64)
+# read label mask, represent it as array of bytes 
+lab=Minc2.read_volume("mni_icbm152_cls_tal_nlin_sym_09c.mnc", store=UInt8)
+
+
+```
 
 ### More examples 
 
