@@ -10,10 +10,12 @@ seg=Minc2.read_volume("/data/data01/vfonov/models/icbm152_model_09c/mni_icbm152_
 fig = Figure()
 gc = fig[1, 1] = GridLayout()
 
-Minc2.draw_outline_with_labels(gc, anat, seg, labels=Dict([1=>"CSF",2=>"GM",3=>"WM"]))
+Minc2.draw_outline_with_labels(gc, anat, seg, 
+    labels=Dict([1=>"CSF",2=>"GM",3=>"WM"]),
+    nslices = 5)
+
 resize_to_layout!(fig)
 
-
-save("test.png", fig, px_per_unit = 2) # size = 600 x 450 pt
+save("mni_icbm152_segmentation.png", fig, px_per_unit = 2) # size = 600 x 450 pt
 
 

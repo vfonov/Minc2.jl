@@ -37,6 +37,8 @@ end
 
 
 """
+    save_xfm_file(h::TransformHandle, path::String)
+
 Low level: Save information into file from an open handle
 """
 function save_xfm_file(h::TransformHandle, path::String)
@@ -44,6 +46,8 @@ function save_xfm_file(h::TransformHandle, path::String)
 end
 
 """
+    transform_point(h::TransformHandle, xyz::Vector{Float64})::Vector{Float64}
+
 Low level: Transform point `xyz` using minc transform `h`
 """
 function transform_point(h::TransformHandle, xyz::Vector{Float64})::Vector{Float64}
@@ -53,6 +57,8 @@ function transform_point(h::TransformHandle, xyz::Vector{Float64})::Vector{Float
 end
 
 """
+    inverse_transform_point(h::TransformHandle, xyz::Vector{Float64})::Vector{Float64}
+
 Low level: Inverse transform point `xyz` using minc transform `h`
 """
 function inverse_transform_point(h::TransformHandle, xyz::Vector{Float64})::Vector{Float64}
@@ -62,6 +68,8 @@ function inverse_transform_point(h::TransformHandle, xyz::Vector{Float64})::Vect
 end
 
 """
+    invert_transform(h::TransformHandle)
+
 Low level: Invert minc transform  `h`
 """
 function invert_transform(h::TransformHandle)
@@ -69,6 +77,8 @@ function invert_transform(h::TransformHandle)
 end
 
 """
+    get_n_concat(h::TransformHandle)::Int64
+
 Low level: Get number of transformations in open handle
 """
 function get_n_concat(h::TransformHandle)::Int64
@@ -78,6 +88,8 @@ function get_n_concat(h::TransformHandle)::Int64
 end
 
 """
+    get_n_type(h::TransformHandle; n::Int64=0)::XFM
+
 Low level: Get transform type  for `n`th transform in open handle
 """
 function get_n_type(h::TransformHandle; n::Int64=0)::XFM
@@ -87,6 +99,8 @@ function get_n_type(h::TransformHandle; n::Int64=0)::XFM
 end
 
 """
+    get_grid_transform(h::TransformHandle; n::Int64=0)
+
 Low level: extract reference to a grid file from open handle
 """
 function get_grid_transform(h::TransformHandle; n::Int64=0)
@@ -102,6 +116,8 @@ function get_grid_transform(h::TransformHandle; n::Int64=0)
 end
 
 """
+    get_linear_transform(h::TransformHandle; n::Int64=0)::AffineTransform{Float64}
+
 Low level: extract AffineTransform{Float64} from open handle
 """
 function get_linear_transform(h::TransformHandle; n::Int64=0)::AffineTransform{Float64}
@@ -111,6 +127,8 @@ function get_linear_transform(h::TransformHandle; n::Int64=0)::AffineTransform{F
 end
 
 """
+    get_linear_transform_param(h::TransformHandle;n::Int64=0,center::Union{Nothing,Vector{Float64}}=nothing)
+
 Low level: extact transformation parameters from affine transform , returns named tuple with fields `center`, `translations`, `scales`, `shears`, `rotations`
 """
 function get_linear_transform_param(h::TransformHandle;n::Int64=0,center::Union{Nothing,Vector{Float64}}=nothing)
@@ -129,6 +147,8 @@ function get_linear_transform_param(h::TransformHandle;n::Int64=0,center::Union{
 end
 
 """
+    append_linear_transform(h::TransformHandle, lin::AffineTransform)
+
 Low level: Append affine transform to an open transformation handle
 """
 function append_linear_transform(h::TransformHandle, lin::AffineTransform)
@@ -138,6 +158,8 @@ function append_linear_transform(h::TransformHandle, lin::AffineTransform)
 end
 
 """
+    append_grid_transform(h::TransformHandle, grid_file::String; inv::Bool=false)
+
 Low level: Append grid transform  to an open transformation handle
 """
 function append_grid_transform(h::TransformHandle, grid_file::String; inv::Bool=false)
@@ -145,6 +167,8 @@ function append_grid_transform(h::TransformHandle, grid_file::String; inv::Bool=
 end
 
 """
+    concat_xfm(h::TransformHandle, i::TransformHandle)
+
 Low level: concatenate two transfomations
 """
 function concat_xfm(h::TransformHandle, i::TransformHandle)
@@ -152,6 +176,8 @@ function concat_xfm(h::TransformHandle, i::TransformHandle)
 end
 
 """
+    load_transforms(h::TransformHandle)::Vector{AnyTransform}
+
 Low level: Load all transforms from open .XFM handle
 """
 function load_transforms(h::TransformHandle)::Vector{AnyTransform}

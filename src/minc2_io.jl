@@ -2,7 +2,7 @@ using CBinding
 using .minc2_simple
 
 """
-Low Level: Axis types from MINC volume, TODO: make this compatible with NIFTI ?
+Low Level: Axis types from MINC volume
 """
 @enum DIM begin
     DIM_UNKNOWN = Cint(minc2_simple.MINC2_DIM_UNKNOWN)
@@ -71,6 +71,8 @@ end
 Base.showerror(io::IO, e::Minc2Error) = print(io,"MINC2:", e.message)
 
 """
+    minc2_check( ex )
+
 Macro to verify the return code
 """
 macro minc2_check( ex ) # STATUS::SUCCESS
@@ -78,6 +80,8 @@ macro minc2_check( ex ) # STATUS::SUCCESS
 end
 
 """
+    VolumeHandle
+
 minc2_simple volume handle
 """
 mutable struct VolumeHandle
@@ -93,7 +97,10 @@ end
 
 
 """
+    MincHeader
+
 Structure describing spatial orientation and sampling of the minc file 
+
 """
 mutable struct MincHeader
     " Dimensions in voxels"
@@ -124,6 +131,8 @@ mutable struct MincHeader
 end
 
 """
+    open_minc_file(fname::String)::VolumeHandle
+
 Open minc file, return handle
 """
 function open_minc_file(fname::String)::VolumeHandle
@@ -133,6 +142,8 @@ function open_minc_file(fname::String)::VolumeHandle
 end
 
 """
+    define_minc_file(hdr::MincHeader,::Type{Store}=Float32,::Type{Repr}=Store) 
+
 Define new minc file structure, return handle
 """
 function define_minc_file(hdr::MincHeader,::Type{Store}=Float32,::Type{Repr}=Store) where {Store,Repr}
@@ -171,6 +182,8 @@ function define_minc_file(hdr::MincHeader,::Type{Store}=Float32,::Type{Repr}=Sto
 end
 
 """
+    create_minc_file(h::VolumeHandle, path::AbstractString)
+
 Create empty minc file on disk, structure need to be defined in advance
 """
 function create_minc_file(h::VolumeHandle, path::AbstractString)
@@ -178,6 +191,8 @@ function create_minc_file(h::VolumeHandle, path::AbstractString)
 end
 
 """
+    close_minc_file(h::VolumeHandle)
+
 Close currently open minc file, commit data on disk
 """
 function close_minc_file(h::VolumeHandle)
@@ -185,6 +200,8 @@ function close_minc_file(h::VolumeHandle)
 end
 
 """
+    ndim(h::VolumeHandle)::Int
+
 Query number of dimensions in the minc file
 """
 function ndim(h::VolumeHandle)::Int
@@ -194,6 +211,8 @@ function ndim(h::VolumeHandle)::Int
 end
 
 """
+    setup_standard_order(h::VolumeHandle)
+
 Prepare to read volume in standard order: [V,X,Y,Z,TIME]
 """
 function setup_standard_order(h::VolumeHandle)
@@ -201,6 +220,8 @@ function setup_standard_order(h::VolumeHandle)
 end
 
 """
+    _hdr_convert!(hdr::MincHeader,dd)::MincHeader
+
 internal function
 """
 function _hdr_convert!(hdr::MincHeader,dd)::MincHeader
@@ -224,6 +245,8 @@ function _hdr_convert!(hdr::MincHeader,dd)::MincHeader
 end
 
 """
+    representation_header(h::VolumeHandle)::MincHeader
+
 Return volume representation header
 """
 function representation_header(h::VolumeHandle)::MincHeader
@@ -237,6 +260,8 @@ function representation_header(h::VolumeHandle)::MincHeader
 end
 
 """
+    store_header(h::VolumeHandle)::MincHeader
+
 Return volume on-disk stucture header
 """
 function store_header(h::VolumeHandle)::MincHeader
@@ -251,6 +276,9 @@ end
 
 
 """
+    empty_like_minc_volume_raw( h::VolumeHandle,
+        ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader}
+
 Allocate empty volume using handle
 return volume, storage header
 """
@@ -266,6 +294,9 @@ end
 
 
 """
+    read_minc_volume_raw(h::VolumeHandle, 
+        ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader}
+        
 Read the actual volume using handle
 return volume, storage header
 """
@@ -280,6 +311,9 @@ end
 
 
 """
+    empty_like_minc_volume_std(h::VolumeHandle, 
+        ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader}
+
 Read the actual volume using handle
 return volume, representation header,storage header
 """
@@ -296,6 +330,9 @@ end
 
 
 """
+    read_minc_volume_std(h::VolumeHandle, 
+        ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader}
+        
 Read the actual volume using handle
 return volume, representation header,storage header
 """
@@ -310,6 +347,9 @@ end
 
 
 """
+    empty_like_minc_volume_std(path::String, 
+        ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader}
+
 allocate empty volume using path as a reference
 return volume, representation header,storage header
 """
@@ -323,6 +363,8 @@ function empty_like_minc_volume_std(path::String,
 end
 
 """
+    empty_like_minc_volume_std_history(path::String, ::Type{T}=Float32 )
+
 allocate empty volume using path
 return volume, representation header,storage header
 """
@@ -337,6 +379,9 @@ end
 
 
 """
+    read_minc_volume_std(path::String, ::Type{T}=Float32 )::
+        Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader}
+
 Read the actual volume using path
 return volume, representation header,storage header
 """
@@ -351,11 +396,14 @@ end
 
 
 """
+    read_minc_volume_std_history(path::String, ::Type{T}=Float32 )::
+        Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader, Union{String,Nothing}}
+
 Read the actual volume using path
 return volume, representation header,storage header
 """
 function read_minc_volume_std_history(path::String, ::Type{T}=Float32 )::
-    Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader, Union{String,Nothing}} where {T} 
+        Tuple{Array{T}, Minc2.MincHeader, Minc2.MincHeader, Union{String,Nothing}} where {T} 
     handle = open_minc_file(path)
     volume, hdr, store_hdr = read_minc_volume_std(handle,T)
     history = read_history(handle)
@@ -367,10 +415,14 @@ end
 
 
 """
+    empty_like_minc_volume_raw(path::String, ::Type{T}=Float32 )::
+            Tuple{Array{T}, Minc2.MincHeader}
+
 Create empty volume similar to existing file
 return volume, representation header,storage header
 """
-function empty_like_minc_volume_raw(path::String, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader} where {T}
+function empty_like_minc_volume_raw(path::String, ::Type{T}=Float32 )::
+        Tuple{Array{T}, Minc2.MincHeader} where {T}
     handle = open_minc_file(path)
     volume, store_hdr = empty_like_minc_volume_raw(handle,T)
     close_minc_file(handle)
@@ -380,10 +432,14 @@ end
 
 
 """
+    read_minc_volume_raw(path::String, ::Type{T}=Float32 )::
+        Tuple{Array{T}, Minc2.MincHeader}
+
 Read the actual volume using path
 return volume, representation header,storage header
 """
-function read_minc_volume_raw(path::String, ::Type{T}=Float32 )::Tuple{Array{T}, Minc2.MincHeader} where {T}
+function read_minc_volume_raw(path::String, ::Type{T}=Float32 )::
+        Tuple{Array{T}, Minc2.MincHeader} where {T}
     handle = open_minc_file(path)
     volume, store_hdr = read_minc_volume_raw(handle,T)
     close_minc_file(handle)
@@ -392,6 +448,8 @@ function read_minc_volume_raw(path::String, ::Type{T}=Float32 )::Tuple{Array{T},
 end
 
 """
+    read_minc_volume_raw_history(path::String, ::Type{T}=Float32 )
+
 Read the actual volume using path
 return volume, representation header,storage header
 """
@@ -407,6 +465,8 @@ end
 
 
 """
+    write_minc_volume_raw(h::VolumeHandle, volume::Array{T} )
+
 write full volume to file, file should be defined and created
 return nothing
 """
@@ -417,6 +477,8 @@ end
 
 
 """
+    write_minc_volume_std(h::VolumeHandle, volume::Array{T} ) 
+
 write full volume to file, file should be defined and created
 return nothing
 """
@@ -427,6 +489,8 @@ function write_minc_volume_std(h::VolumeHandle, volume::Array{T} ) where {T}
 end
 
 """
+    copy_minc_metadata(i::VolumeHandle, o::VolumeHandle)
+
 Copy metadata from one file to another
 """
 function copy_minc_metadata(i::VolumeHandle, o::VolumeHandle)
@@ -435,6 +499,10 @@ end
 
 
 """
+    read_attribute(h::VolumeHandle, 
+        group::String,
+        attribute::String)::Union{String, AbstractVector, Nothing}
+
 Read minc2 header attribute
 :param group: attribute group name
 :param attribute: attribute name
@@ -507,6 +575,8 @@ function read_attribute(h::VolumeHandle,
 end
 
 """
+    get_attribute(h::VolumeHandle,g::String,a::String; default=missing)
+
 Convenience function for reading specific attribute, return default value if not found
 also convert Array into the first value if it's a one-length array
 """
@@ -534,6 +604,8 @@ end
 
 
 """
+    groups(h::VolumeHandle)
+
 List groups defined in minc2 file
 """
 function groups(h::VolumeHandle)
@@ -552,6 +624,8 @@ end
 
 
 """
+    attributes(h::VolumeHandle, g::String)
+
 List attributes defined inside given group
 """
 function attributes(h::VolumeHandle, g::String)
@@ -569,6 +643,8 @@ function attributes(h::VolumeHandle, g::String)
 end
 
 """
+    write_attribute(h::VolumeHandle, group::String, attribute::String, value::T)
+
 Store attribute into minc2 file
 :param group:  group name
 :param attribute:  attribute name
@@ -589,6 +665,8 @@ function write_attribute(h::VolumeHandle, group::String, attribute::String, valu
 end
 
 """
+    read_history(i::VolumeHandle)::Union{String, Nothing}
+
 Return history string
 """
 function read_history(i::VolumeHandle)::Union{String, Nothing}
@@ -596,6 +674,8 @@ function read_history(i::VolumeHandle)::Union{String, Nothing}
 end
 
 """
+    write_history(i::VolumeHandle, history::String)
+
 Write history string
 """
 function write_history(i::VolumeHandle, history::String)
@@ -603,6 +683,8 @@ function write_history(i::VolumeHandle, history::String)
 end
 
 """
+    world_to_voxel(h::VolumeHandle, xyz::Vector{Float64})::Vector{Float64}
+
 Convert world coordinates (X,Y,Z) to contignuous voxel indexes (I,J,K) 0-based
 """
 function world_to_voxel(h::VolumeHandle, xyz::Vector{Float64})::Vector{Float64}
@@ -614,6 +696,8 @@ function world_to_voxel(h::VolumeHandle, xyz::Vector{Float64})::Vector{Float64}
 end
 
 """
+    voxel_to_world(hdr::MincHeader)::AffineTransform{Float64}
+
 Give AffineTransform for world to voxel transformation based on header
 """
 function voxel_to_world(hdr::MincHeader)::AffineTransform{Float64}
@@ -636,6 +720,8 @@ function voxel_to_world(hdr::MincHeader)::AffineTransform{Float64}
 end
 
 """
+    world_to_voxel(hdr::MincHeader)::AffineTransform{Float64}
+
 Give AffineTransform for voxel to world transformation
 """
 function world_to_voxel(hdr::MincHeader)::AffineTransform{Float64}
@@ -643,7 +729,13 @@ function world_to_voxel(hdr::MincHeader)::AffineTransform{Float64}
 end
 
 """
-Generate header from the voxel to world transform and volume size
+    create_header_from_v2w(
+        sz, t::AffineTransform{T};
+        vector_dim::Bool=false, 
+        time_step::Union{Float64,Nothing}=nothing,
+        time_start::Union{Float64,Nothing}=nothing)::MincHeader
+
+Internal: Generate header from the voxel to world transform and volume size
 """
 function create_header_from_v2w(
         sz, t::AffineTransform{T};
@@ -685,6 +777,8 @@ end
 
 
 """
+    voxel_to_world(h::VolumeHandle,ijk::Vector{Float64})::Vector{Float64}
+
 Convert contignuous 0-based voxel indexes (I,J,K) to world coordinates (X,Y,Z) 0-based
 """
 function voxel_to_world(h::VolumeHandle,ijk::Vector{Float64})::Vector{Float64}
@@ -696,6 +790,11 @@ end
 
 
 """
+    write_minc_volume_std(path::String, ::Type{Store}, 
+        store_hdr::Union{MincHeader, Nothing}, 
+        volume::Array{Repr};like::Union{String, Nothing}=nothing, 
+        history::Union{String, Nothing}=nothing )
+
 Write full volume to file, need to provide details of file structure
 return nothing
 """
@@ -741,6 +840,11 @@ function write_minc_volume_std(path::String, ::Type{Store},
 end
 
 """
+    write_minc_volume_raw(path::String, ::Type{Store}, 
+        store_hdr::Union{MincHeader, Nothing}, 
+        volume::Array{Repr};like::Union{String, Nothing}=nothing, 
+        history::Union{String, Nothing}=nothing )
+
 Write full volume to file, need to provide details of file structure
 return nothing
 """
@@ -783,6 +887,3 @@ function write_minc_volume_raw(path::String, ::Type{Store},
     finalize(handle)
     return nothing
 end
-
-
-

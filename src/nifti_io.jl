@@ -4,6 +4,8 @@ using StaticArrays
 
 
 """
+    lps_to_ras(xfm::Minc2.AffineTransform)
+
 Convert coordinates from LPS to RAS
 """
 function lps_to_ras(xfm::Minc2.AffineTransform)
@@ -15,6 +17,8 @@ end
 
 
 """
+    lps_to_ras(vol::Minc2.Volume3D{T})::Minc2.Volume3D{T}
+
 Convert coordinates from LPS to RAS
 """
 function lps_to_ras(vol::Minc2.Volume3D{T})::Minc2.Volume3D{T} where {T}
@@ -23,6 +27,8 @@ end
 
 
 """
+    read_nifti_volume(fn::AbstractString; store::Type{T}=Float64)::Volume3D{T}
+
 Read Volume3D from .nii or .nii.gz file
 """
 function read_nifti_volume(fn::AbstractString; store::Type{T}=Float64)::Volume3D{T} where {T}
@@ -47,6 +53,9 @@ end
 
 
 """
+    save_nifti_volume(fn::AbstractString, vol::Volume3D{T}; 
+        store::Type{S}=Float32, history=nothing)
+
 Save Volume3D into .nii or .nii.gz file
 """
 function save_nifti_volume(fn::AbstractString, vol::Volume3D{T}; 
@@ -80,6 +89,9 @@ end
 
 
 """
+    read_itk_nifti_transform(fn::AbstractString;
+        store::Type{T}=Float32)::Minc2.GridTransform{Float64,T}
+
 Read ANTs style warp transform
 """
 function read_itk_nifti_transform(fn::AbstractString;
@@ -94,6 +106,9 @@ end
 
 
 """
+    write_itk_nifti_transform(fn::AbstractString,
+        xfm::Minc2.GridTransform{Float64,T}; store::Type{S}=Float32)
+
 Write ANTs style warp transform
 """
 function write_itk_nifti_transform(fn::AbstractString,
@@ -103,6 +118,8 @@ end
 
 
 """
+    read_ants_transform(fn::AbstractString; store::Type{T}=Float32)::Minc2.AnyTransform
+
 Read .txt and .nii(.nii.gz) transforms produces by ANTs
 """
 function read_ants_transform(fn::AbstractString; store::Type{T}=Float32)::Minc2.AnyTransform where {T}
@@ -118,6 +135,8 @@ end
 
 
 """
+    read_itk_txt_transform(fn::AbstractString)::Minc2.AffineTransform{Float64}
+
 Read ITK legacy transform in .txt format
 """
 function read_itk_txt_transform(fn::AbstractString)::Minc2.AffineTransform{Float64}
@@ -180,6 +199,9 @@ end
 
 
 """
+    write_itk_txt_transform(fn::AbstractString,
+        xfm::Minc2.AffineTransform{Float64})
+
 Write affine transform in ITK .txt format
 """
 function write_itk_txt_transform(fn::AbstractString,

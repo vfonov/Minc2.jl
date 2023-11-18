@@ -5,22 +5,29 @@ using Dates
 
 """
 An abstract 3D volume, could be vector field or volume with time dimension
+
+# Fields
+- vol: underlying array
+- v2w: Voxel to world affine transform
+- history: minc history
+
 """
 struct Volume3D{T,N}
-    "Volume contents"
     vol::Array{T,N} 
-    "Voxel to world affine transform"
     v2w::AffineTransform{Float64} 
-    "Metadata: Volume history"
     history::Union{String,Nothing} 
 end
 
 """
+    voxel_to_world(vol::Volume3D)
+
 Extract voxel to world affine transform from a Volume3D
 """
 voxel_to_world(vol::Volume3D) = vol.v2w
 
 """
+    world_to_voxel(vol::Volume3D)
+
 Extract world to voxel affine transform from a Volume3D
 """
 function world_to_voxel(vol::Volume3D)
@@ -30,6 +37,8 @@ end
 
 
 """
+    array(vol::Volume3D)
+
 Extract underlying plain array
 """
 array(vol::Volume3D) = vol.vol
@@ -38,6 +47,9 @@ array(vol::Volume3D) = vol.vol
 
 
 """
+    Volume3D(vol::Array{T,N}, v2w::AffineTransform{Float64}; 
+        history::Union{AbstractString,Nothing}=nothing)::Volume3D{T,N}
+
 Create Volume3D from an array and affine transform
 """
 function Volume3D(vol::Array{T,N}, v2w::AffineTransform{Float64}; 
@@ -47,6 +59,9 @@ end
 
 
 """
+    Volume3D(vol::Array{T,N}, like::Volume3D; 
+        history::Union{AbstractString,Nothing}=nothing)::Volume3D{T,N}
+
 Create Volume3D from an array and another Volume3D that is used for sampling information
 """
 function Volume3D(vol::Array{T,N}, like::Volume3D; 
@@ -56,6 +71,8 @@ end
 
 
 """
+    GridTransform(vol::V)
+
 Create GridTransform from Volume3D, assume it is a vector field
 """
 function GridTransform(vol::V) where {V<:Volume3D}
@@ -64,6 +81,8 @@ end
 
 
 """
+    InverseGridTransform(vol::V)
+
 Create InverseGridTransform from Volume3D, assume it is a vector field
 """
 function InverseGridTransform(vol::V) where {V<:Volume3D}
@@ -75,8 +94,9 @@ end
 Base.show(io::IO, z::Volume3D{T,N}) where {T,N} = print(io, "Volume3D{$(T),$(N)}:", size(z.vol)," ", z.v2w)
 
 
-
 """
+    read_volume(fn::String; store::Type{T}=Float64)::Volume3D{T}
+
 Read Volume3D from minc file
 """
 function read_volume(fn::String; store::Type{T}=Float64)::Volume3D{T} where {T}
@@ -88,6 +108,10 @@ end
 
 
 """
+    empty_volume_like(
+            fn::String; 
+            store::Type{T}=Float64, history=nothing)::Volume3D{T}
+
 Create an empty Volume3D
 """
 function empty_volume_like(
@@ -101,6 +125,11 @@ end
 
 
 """
+    empty_volume_like(
+        vol::Volume3D{T1,N}; 
+        store::Type{T}=Float64, 
+        history=nothing)
+
 Create an empty Volume3D
 """
 function empty_volume_like(
@@ -113,6 +142,11 @@ end
 
 
 """
+    save_volume(fn::AbstractString, 
+        vol::Volume3D{T,N}; 
+        store::Type{S}=Float32,
+        history=nothing)
+
 Save Volume3D to minc file
 """
 function save_volume(fn::AbstractString, 
@@ -133,6 +167,17 @@ end
 
 
 """
+    resample_grid_volume!(
+        in_vol::AbstractArray{T,4},
+        out_vol::AbstractArray{T,4},
+        v2w::AffineTransform{C}, 
+        w2v::AffineTransform{C}, 
+        itfm::Union{Vector{XFM}, XFM};
+        interp::I=BSpline(Quadratic(Line(OnCell()))),
+        fill=0.0,
+        ftol=1.0/80,
+        max_iter=10)::AbstractArray{T,4}
+
 Resample 4D array using transformation,
 assume 1st dimension is non spatial (vector dimension)
 """
@@ -164,6 +209,11 @@ end
 
 
 """
+    resample_grid(
+        in_grid::Volume3D{T,4}, 
+        itfm::Union{Vector{XFM}, XFM}; 
+        like::Union{Nothing,Volume3D{L,4}}=nothing)::Volume3D{T,4}
+
 Resample Volume3D that contain 4D array,
 using transformation, assume 1st dimension is non spatial
 """
@@ -186,6 +236,12 @@ end
 
 
 """
+    tfm_to_grid!(
+        tfm::Union{Vector{XFM}, XFM}, 
+        grid::AbstractArray{T,4},
+        v2w::AffineTransform{C};
+        ftol=1.0/80,max_iter=10)::AbstractArray{T,4}
+
 Convert arbitrary transformation 
 into vector field
 """
@@ -205,6 +261,11 @@ end
 
 
 """
+    tfm_to_grid(
+        tfm::Union{Vector{XFM}, XFM},
+        ref::G;
+        store::Type{T}=Float64,ftol=1.0/80,max_iter=10)::Volume3D{T,4}
+
 Convert arbitrary transformation 
 into Volume3D with 4D array containing vector field
 """
@@ -227,6 +288,10 @@ end
 
 
 """
+    normalize_tfm(tfm::Union{Vector{XFM}, XFM},
+        ref::G;
+        store::Type{T}=Float64,ftol=1.0/80,max_iter=10)::GridTransform{Float64,T}
+
 Convert arbitrary transformation 
 into a single GridTransform
 """
@@ -244,6 +309,10 @@ end
 
 
 """
+    normalize_tfm(tfm::Union{Vector{XFM}, XFM},
+        ref::G;
+        store::Type{T}=Float64,ftol=1.0/80,max_iter=10)::GridTransform{Float64,T}
+
 Convert arbitrary transformation 
 into a single GridTransform
 """
@@ -261,6 +330,16 @@ end
 
 
 """
+    resample_volume!(in_vol::AbstractArray{T,3}, 
+        out_vol::AbstractArray{T,3}, 
+        v2w::AffineTransform{C}, 
+        w2v::AffineTransform{C}, 
+        itfm::Union{Vector{XFM},XFM};
+        interp::I=BSpline(Quadratic(Line(OnCell()))),
+        fill=0.0,
+        ftol=1.0/80,
+        max_iter=10)
+
 Resample 3D array using transformation 
 """
 function resample_volume!(in_vol::AbstractArray{T,3}, 
@@ -287,6 +366,17 @@ end
 
 
 """
+    resample_volume!(
+        in_vol::Volume3D{T,3}, 
+        out_vol::Volume3D{O,3}; 
+        tfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
+        itfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
+        interp::I=nothing, 
+        fill=0.0, 
+        order=nothing,
+        ftol=1.0/80,
+        max_iter=10)::Volume3D{O,3}
+
 Resample Volume3D using transformation 
 """
 function resample_volume!(
@@ -336,6 +426,17 @@ end
 
 
 """
+    resample_volume(
+        in_vol::Volume3D{T,3};
+        like::Union{Volume3D{O,3},Nothing}=nothing,
+        tfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
+        itfm::Union{Vector{XFM},XFM,Nothing}=nothing, 
+        interp::I=nothing, 
+        fill=0.0,
+        order=1,
+        ftol=1.0/80,
+        max_iter=10)::Volume3D 
+
 Resample Volume3D using transformation 
 """
 function resample_volume(
@@ -401,6 +502,14 @@ end
 
 
 """
+    calculate_jacobian!(
+        tfm::Union{Vector{XFM},XFM},
+        out_vol::AbstractArray{T,3},
+        out_v2w::AffineTransform{C};
+        interp::I=BSpline(Quadratic(Line(OnCell()))),
+        ftol=1.0/80,
+        max_iter=10)
+
 Calculate dense jacobian determinant field for an arbitrary transformation
 """
 function calculate_jacobian!(
@@ -439,6 +548,13 @@ function calculate_jacobian!(
 end
 
 """
+    calculate_jacobian!(
+        tfm::Union{Vector{XFM},XFM}, 
+        out_vol::Volume3D{T,3}; 
+        interp::I=BSpline(Quadratic(Line(OnCell()))),
+        ftol=1.0/80,
+        max_iter=10)::Volume3D{T,3}
+
 Calculate dense jacobian determinant field for an arbitrary transformation
 """
 function calculate_jacobian!(
@@ -454,6 +570,8 @@ end
 
 
 """
+    format_history(args)::String
+
 Generate minc-style history from program args
 """
 function format_history(args)::String

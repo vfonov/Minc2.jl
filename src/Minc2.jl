@@ -23,7 +23,7 @@ include("minc_hl.jl")
 # ITK and NIFTI interface
 include("nifti_io.jl")
 
-# draw illustration using Makie
+# draw illustration using Makie, if available
 function __init__()
     @require Colors="5ae59095-9a9b-59fe-a467-6f913c188581" begin
         @require Makie="ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a" begin
