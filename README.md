@@ -167,6 +167,9 @@ Will produce
 
 See `examples` directory for more examples
 
-## MINC documentation
+## Documentation
 
-Underlying MINC documentations is available at https://en.wikibooks.org/wiki/MINC
+Preliminary documentation is available at https://www.ilmarin.info/Minc2.jl/
+
+Documentations for underlying libminc and minc tools is available at 
+
