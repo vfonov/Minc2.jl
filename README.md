@@ -127,6 +127,9 @@ resize_to_layout!(fig)
 
 save("mni_icbm152_segmentation.png", fig, px_per_unit = 1)
 ```
+
+Will produce
+
 ![MNI-ICBM152](https://github.com/vfonov/Minc2.jl/blob/main/docs/src/assets/mni_icbm152_segmentation.png?raw=true)
 
 ### Show MNI-ICBM152 template contours with GM proability map
@@ -157,7 +160,6 @@ save("mni_icbm152_gm.png", fig, px_per_unit = 1)
 
 Will produce
 ![MNI-ICBM152](https://github.com/vfonov/Minc2.jl/blob/main/docs/src/assets/mni_icbm152_gm.png?raw=true)
-
 
 ## More examples
 
