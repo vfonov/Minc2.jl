@@ -1,12 +1,6 @@
 # MINC2 for Julia
 
-[![License][license-img]][license-url]
-[![Docs-stable][docs-stable-img]][docs-stable-url]
-[![Docs-dev][docs-dev-img]][docs-dev-url]
-[![pkgeval][pkgeval-img]][pkgeval-url]
-[![unittest][action-img]][action-url]
-[![codecov][codecov-img]][codecov-url]
-
+[![CI](https://github.com/vfonov/Minc2.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/vfonov/Minc2.jl/actions/workflows/CI.yml)
 
 Read and write MINC2 files from Julia, reading and writing .xfm transformation files, 
 Manipulations with volumes
