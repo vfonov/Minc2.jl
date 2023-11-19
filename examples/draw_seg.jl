@@ -16,6 +16,6 @@ Minc2.draw_outline_with_labels(gc, anat, seg,
 
 resize_to_layout!(fig)
 
-save("mni_icbm152_segmentation.png", fig, px_per_unit = 2) # size = 600 x 450 pt
+save("mni_icbm152_segmentation.png", fig, px_per_unit = 1) 
 
 

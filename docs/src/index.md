@@ -157,3 +157,7 @@ save("mni_icbm152_gm.png", fig, px_per_unit = 2)
 ## More examples
 
 See `examples` directory for more examples
+
+## MINC documentation
+
+Underlying MINC documentations is available at https://en.wikibooks.org/wiki/MINC
