@@ -25,4 +25,4 @@ NIfTI = "0.6"
 Rotations = "1.6"
 StaticArrays = "1.7"
 StatsBase = "0.34"
-
+Requires = "1"
