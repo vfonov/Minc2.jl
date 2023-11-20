@@ -18,4 +18,11 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 libminc_jll = "dce2f2bf-0ed4-5a0e-8af7-a90b827a9344"
 
 [compat]
-Requires = "1"
+julia = "1.6"
+CBinding = "1"
+Interpolations = "0.14"
+NIfTI = "0.6"
+Rotations = "1.6"
+StaticArrays = "1.7"
+StatsBase = "0.34"
+
