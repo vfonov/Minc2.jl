@@ -179,6 +179,7 @@ See `examples` directory for more examples:
 - `resample_itk.jl` - resample nifti file with transformations produces by ANTS (multiple transformations can be applied in one go), equivalent to `antsApplyTransforms`
 - `resample.jl`  - apply transformation to minc volume, equivalent to `mincresample`
 - `xfm_to_jacobian.jl` - calculate jacobian determinant field, for a given .xfm file
+- `mincinfo.jl` -  show information about mincfile(s) and store it in csv file, equivalent to `mincinfo`
 
 ## Documentation
 
