@@ -185,5 +185,6 @@ See `examples` directory for more examples:
 
 Preliminary documentation is available at https://www.ilmarin.info/Minc2.jl/
 
-Documentations for underlying libminc and minc tools is available at 
+Documentations for underlying libminc and minc tools is available at https://en.wikibooks.org/wiki/MINC
+
 
