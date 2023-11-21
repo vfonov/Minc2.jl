@@ -1,4 +1,7 @@
-using Minc2 # for reading MINC2 files
+# Apply gaussian blurring to a minc file
+# Equivalent to mincblur -fwhm <n> in.mnc out.mnc
+
+using Minc2 
 using ArgParse
 using ImageFiltering
 
@@ -25,9 +28,9 @@ args = parse_commandline()
 
 in_vol = Minc2.read_volume(args["in"],store=Float64)
 out_vol = Minc2.empty_volume_like(in_vol)
-kernel=KernelFactors.gaussian((args["fwhm"]/2.355,args["fwhm"]/2.355,args["fwhm"]/2.355))
+kernel = KernelFactors.gaussian((args["fwhm"]/2.355, args["fwhm"]/2.355, args["fwhm"]/2.355))
 
-imfilter!(out_vol.vol, in_vol.vol, kernel)
+imfilter!(Minc2.array(out_vol), Minc2.array(in_vol), kernel)
 
 
-Minc2.save_volume(args["out"],out_vol,store=UInt16, history=Minc2.format_history(ARGS))
+Minc2.save_volume(args["out"], out_vol, store=UInt16, history=Minc2.format_history(ARGS))

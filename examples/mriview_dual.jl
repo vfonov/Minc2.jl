@@ -9,6 +9,7 @@ using ImageCore
 using Images
 using IndirectArrays, Colors
 using Statistics
+using ArgParse
 
 function mriview(path,path2,zoom::Int=5)
     a = Minc2.open_minc_file(path)
@@ -60,6 +61,23 @@ function mriview(path,path2,zoom::Int=5)
 
 end
 
+function parse_commandline()
+    s = ArgParseSettings()
 
-mriview("/home/vfonov/mni/icbm152_model_09c/mni_icbm152_t1_tal_nlin_asym_09c.mnc",
-        "/home/vfonov/mni/icbm152_model_09c/mni_icbm152_t1_tal_nlin_asym_09c_mask.mnc")
+    @add_arg_table s begin
+        "in1"
+            help = "Input minc file"
+            required = true
+        "in2"
+            help = "Input minc file"
+            required = true
+    end
+    parse_args(ARGS, s)
+end
+
+
+args = parse_commandline()
+
+mriview(args["in1"],args["in1"])
+
+

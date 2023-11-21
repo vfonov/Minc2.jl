@@ -1,3 +1,5 @@
+# List all metadata stored with minc file, similar to mincheader
+
 using Minc2 # for reading MINC2 files
 using ArgParse
 
@@ -16,11 +18,8 @@ args = parse_commandline()
 
 a = Minc2.open_minc_file(args["in"])
 
-groups = Minc2.groups(a)
-
-for g in groups
-    attrs = Minc2.attributes(a,g)
-    for i in attrs
+for g in Minc2.groups(a)
+    for i in Minc2.attributes(a,g)
         v = Minc2.read_attribute(a,g,i)
         @info "$(g):$(i) $(v)"
     end

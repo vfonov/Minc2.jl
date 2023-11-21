@@ -7,6 +7,7 @@ using ImageView
 using Gtk.ShortNames
 using ImageCore
 using Statistics
+using ArgParse
 
 function mriview(path, zoom::Int=5)
     a = Minc2.open_minc_file(path)
@@ -42,4 +43,17 @@ function mriview(path, zoom::Int=5)
 end
 
 
-mriview("/home/vfonov/mni/icbm152_model_09c/mni_icbm152_t1_tal_nlin_asym_09c.mnc")
+function parse_commandline()
+    s = ArgParseSettings()
+
+    @add_arg_table s begin
+        "in"
+            help = "Input minc file"
+            required = true
+    end
+    parse_args(ARGS, s)
+end
+
+args = parse_commandline()
+
+mriview(args["in"])

@@ -1,7 +1,8 @@
+# Show MNI-ICBM152 template contours with GM proability map
+
 using CairoMakie
 using Colors
-
-using Minc2 # for reading MINC2 files
+using Minc2 
 
 
 anat=Minc2.read_volume("/data/data01/vfonov/models/icbm152_model_09c/mni_icbm152_t1_tal_nlin_sym_09c.mnc",store=Float64)

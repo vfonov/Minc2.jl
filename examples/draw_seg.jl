@@ -1,3 +1,5 @@
+# Show MNI-ICBM152 template contours with tissue masks overlays
+
 using CairoMakie
 using Colors
 

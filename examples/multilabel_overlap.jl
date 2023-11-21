@@ -40,8 +40,6 @@ seg=combinedims([Minc2.read_volume(i, store=UInt8).vol for i in args["in"] ])
 
 cseg=map(x->remap_fw[x],seg)
 
-#maj=mode.(splitdimsview(cseg,(1,2,3)))
-
 
 function gen_ovl(arr,nlab_)
     # discrete version of the formula from http://dx.doi.org/10.1109/TMI.2006.880587
@@ -87,4 +85,3 @@ if !isnothing(args["ovl"])
 end
 
 println( sum(I)/sum(U))
-

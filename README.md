@@ -165,7 +165,20 @@ Will produce
 
 ## More examples
 
-See `examples` directory for more examples
+See `examples` directory for more examples:
+
+- `bloor.jl` - Apply Blooring kernel to minc volume, equivalent to mincbloor
+- `copy.jl` - Create a minc volume with the same dimensions as another one, copy voxels
+- `draw_heatmap.jl` - Show MNI-ICBM152 template contours with GM proability map, as above
+- `draw_seg.jl` - Show MNI-ICBM152 template contours with tissue masks overlays, as above
+- `list_meta.jl` - List all metadata stored with minc file, similar to `mincheader`
+- `mriview_dual.jl` - Show two minc volumes side-by-side, interactively
+- `mriview.jl` -  Show minc volume, interactively
+- `multilabel_overlap.jl` - calculate voxel-wise generalized overlap coeffecient , method from http://dx.doi.org/10.1109/TMI.2006.880587
+- `resample_grid.jl` - apply transformation to _grid file
+- `resample_itk.jl` - resample nifti file with transformations produces by ANTS (multiple transformations can be applied in one go), equivalent to `antsApplyTransforms`
+- `resample.jl`  - apply transformation to minc volume, equivalent to `mincresample`
+- `xfm_to_jacobian.jl` - calculate jacobian determinant field, for a given .xfm file
 
 ## Documentation
 

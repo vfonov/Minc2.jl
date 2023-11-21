@@ -70,9 +70,6 @@ args = parse_commandline()
 
 in_vol,in_hdr,in_store_hdr = Minc2.read_minc_volume_std(args["in"], Float64)
 
-#@info "in_vol:",size(in_vol)
-#@info "in_hdr:",in_hdr
-
 if !isnothing(args["like"])
     out_vol,out_hdr,out_store_hdr = Minc2.empty_like_minc_volume_std(args["like"],Float64)
 else
@@ -88,18 +85,13 @@ tfm=Minc2.load_transforms(args["transform"])
 itfm=Minc2.inv(tfm)
 
 if args["order"] == 0     # nearest
-    #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Constant())),args["fill"])
     resample_grid_volume(in_vol, out_vol,v2w,w2v,itfm; interp=BSpline(Constant()),fill=args["fill"])
 elseif args["order"] == 1 # linear
-    @timev resample_grid_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Linear()),fill=args["fill"])
-    #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Linear())),args["fill"])
+    resample_grid_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Linear()),fill=args["fill"])
 elseif args["order"] == 2 # quadratic
-    @timev resample_grid_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Quadratic(Line(OnCell()))),fill=args["fill"])
-    #statprofilehtml()
-    #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Quadratic(Line(OnCell())))), args["fill"])
+    resample_grid_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Quadratic(Line(OnCell()))),fill=args["fill"])
 elseif args["order"] == 3 # cubic
     resample_grid_volume(in_vol,out_vol,v2w,w2v,itfm; interp=BSpline(Cubic(Line(OnCell()))),fill=args["fill"])
-    #in_vol_itp = extrapolate( interpolate( in_vol, BSpline(Cubic(Line(OnCell())))), args["fill"])
 end
 
 
