@@ -1,6 +1,9 @@
 # MINC2 for Julia
 
 [![CI](https://github.com/vfonov/Minc2.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/vfonov/Minc2.jl/actions/workflows/CI.yml)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://www.ilmarin.info/Minc2.jl/)
+
+
 
 Read and write MINC2 files from Julia, reading and writing .xfm transformation files, 
 Manipulations with volumes
