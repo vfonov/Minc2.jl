@@ -15,7 +15,7 @@ makedocs(
         "Introduction to Minc2.jl"  => "index.md",
         "High level functions"      => "high_level.md",
         "Gemetric transformation functions" => "geo.md",
-        "Low level functions"        => "high_level.md",
+        "Low level functions"        => "low_level.md",
         "Alphabetical function list" => "function_list.md",
     ],
 )

@@ -29,6 +29,11 @@ icbm=Minc2.read_volume("mni_icbm152_t1_tal_nlin_sym_09c.mnc", store=Float64)
 
 Output `mean(Minc2.array(icbm)) = 29.61005194874031`
 
+```@docs
+read_volume
+array
+```
+
 
 ### Read a 3D volume with real values, and another one with mask labels and show statistics per label
 
@@ -55,9 +60,10 @@ GM:64.88399427312729
 WM:84.74593912912998
 ```
 
+
 ### Apply transformation stored in .xfm file to a minc volume, save result
 
-Create transformation:`param2xfm -rotations 30 0 0 rotate.xfm`
+Create transformation with minc command:`param2xfm -rotations 30 0 0 rotate.xfm`
 
 ```julia
 using Minc2
@@ -76,6 +82,13 @@ transformed_icbm=Minc2.resample_volume(icbm; tfm, order=2, fill=0.0)
 # but will preserve floating point vales used fixe-point arithmetics
 Minc2.save_volume("transformed_icbm.mnc",transformed_icbm, store=UInt16, history="Julia example")
 ```
+
+```@docs
+load_transforms
+resample_volume
+save_volume
+```
+
 
 ### Integrate jacobians per ROI, based on a transformation in .xfm file
 
@@ -104,6 +117,13 @@ for (i,l) in [1=>"ROI-1",2=>"ROI-2",3=>"ROI-3"]
 end
 ```
 
+```@docs
+decompose
+empty_volume_like
+calculate_jacobian!
+```
+
+
 ## Graphic examples, using Makie
 
 ### Show MNI-ICBM152 template contours with tissue masks overlays
@@ -131,8 +151,13 @@ save("mni_icbm152_segmentation.png", fig, px_per_unit = 1)
 ```
 
 Will produce
-
 ![MNI-ICBM152](https://github.com/vfonov/Minc2.jl/blob/main/docs/src/assets/mni_icbm152_segmentation.png?raw=true)
+
+
+```@docs
+draw_outline_with_labels
+```
+
 
 ### Show MNI-ICBM152 template contours with GM proability map
 
@@ -163,6 +188,11 @@ save("mni_icbm152_gm.png", fig, px_per_unit = 1)
 Will produce
 ![MNI-ICBM152](https://github.com/vfonov/Minc2.jl/blob/main/docs/src/assets/mni_icbm152_gm.png?raw=true)
 
+```@docs
+draw_outline_with_heatmap
+```
+
+
 ## More examples
 
 See `examples` directory for more examples:
@@ -181,9 +211,8 @@ See `examples` directory for more examples:
 - `xfm_to_jacobian.jl` - calculate jacobian determinant field, for a given .xfm file
 - `mincinfo.jl` -  show information about mincfile(s) and store it in csv file, equivalent to `mincinfo`
 
-## Documentation
 
-Preliminary documentation is available at https://www.ilmarin.info/Minc2.jl/
+## Documentation for MINC
 
 Documentations for underlying libminc and minc tools is available at https://en.wikibooks.org/wiki/MINC
 
