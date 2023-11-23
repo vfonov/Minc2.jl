@@ -12,12 +12,11 @@ makedocs(
     warnonly = true,
     clean    = true,
     pages    = [
-        "Introduction to Minc2.jl" => "index.md",
-
-        "Reference" => [
-            "Alphabetical function list" => "reference/index.md",
-            "Function reference"         => "reference/api.md"
-        ],
+        "Introduction to Minc2.jl"  => "index.md",
+        "High level functions"      => "high_level.md",
+        "Gemetric transformation functions" => "geo.md",
+        "Low level functions"        => "high_level.md",
+        "Alphabetical function list" => "function_list.md",
     ],
 )
 
