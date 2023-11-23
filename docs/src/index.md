@@ -31,7 +31,7 @@ Output `mean(Minc2.array(icbm)) = 29.61005194874031`
 
 ```@docs
 Minc2.read_volume
-Minc2.array
+Minc2.array(::Minc2.Volume3D)
 ```
 
 
@@ -84,7 +84,7 @@ Minc2.save_volume("transformed_icbm.mnc",transformed_icbm, store=UInt16, history
 ```
 
 ```@docs
-Minc2.load_transforms
+Minc2.load_transforms(::String)
 Minc2.resample_volume
 Minc2.save_volume
 ```

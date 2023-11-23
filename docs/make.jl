@@ -1,4 +1,5 @@
 using Documenter
+using CairoMakie
 using Minc2
 
 DocMeta.setdocmeta!(Minc2, :DocTestSetup, :(using Minc2); recursive=true)
