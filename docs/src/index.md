@@ -30,8 +30,8 @@ icbm=Minc2.read_volume("mni_icbm152_t1_tal_nlin_sym_09c.mnc", store=Float64)
 Output `mean(Minc2.array(icbm)) = 29.61005194874031`
 
 ```@docs
-read_volume
-array
+Minc2.read_volume
+Minc2.array
 ```
 
 
@@ -84,9 +84,9 @@ Minc2.save_volume("transformed_icbm.mnc",transformed_icbm, store=UInt16, history
 ```
 
 ```@docs
-load_transforms
-resample_volume
-save_volume
+Minc2.load_transforms
+Minc2.resample_volume
+Minc2.save_volume
 ```
 
 
@@ -118,9 +118,9 @@ end
 ```
 
 ```@docs
-decompose
-empty_volume_like
-calculate_jacobian!
+Minc2.decompose
+Minc2.empty_volume_like
+Minc2.calculate_jacobian!
 ```
 
 
@@ -155,7 +155,7 @@ Will produce
 
 
 ```@docs
-draw_outline_with_labels
+Minc2.draw_outline_with_labels
 ```
 
 
@@ -189,7 +189,7 @@ Will produce
 ![MNI-ICBM152](https://github.com/vfonov/Minc2.jl/blob/main/docs/src/assets/mni_icbm152_gm.png?raw=true)
 
 ```@docs
-draw_outline_with_heatmap
+Minc2.draw_outline_with_heatmap
 ```
 
 
