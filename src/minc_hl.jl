@@ -4,17 +4,16 @@ using Interpolations
 using Dates
 
 """
+    Volume3D{T,N}
+
 An abstract 3D volume, could be vector field or volume with time dimension
-
-# Fields
-- vol: underlying array
-- v2w: Voxel to world affine transform
-- history: minc history
-
 """
 struct Volume3D{T,N}
+    "underlying array"
     vol::Array{T,N} 
-    v2w::AffineTransform{Float64} 
+    "Voxel to world affine transform"
+    v2w::AffineTransform{Float64}
+    "minc history"
     history::Union{String,Nothing} 
 end
 
@@ -44,13 +43,15 @@ Extract underlying plain array
 array(vol::Volume3D) = vol.vol
 
 
-
-
 """
     Volume3D(vol::Array{T,N}, v2w::AffineTransform{Float64}; 
         history::Union{AbstractString,Nothing}=nothing)::Volume3D{T,N}
 
 Create Volume3D from an array and affine transform
+
+* `vol` - underlying array
+* `v2w` - voxel to world affine transform
+* `history` - minc history
 """
 function Volume3D(vol::Array{T,N}, v2w::AffineTransform{Float64}; 
         history::Union{AbstractString,Nothing}=nothing)::Volume3D{T,N} where {T,N}
@@ -63,6 +64,10 @@ end
         history::Union{AbstractString,Nothing}=nothing)::Volume3D{T,N}
 
 Create Volume3D from an array and another Volume3D that is used for sampling information
+
+* `vol` - underlying array
+* `like` - Volume3D that is used for sampling information
+* `history` - minc history
 """
 function Volume3D(vol::Array{T,N}, like::Volume3D; 
         history::Union{AbstractString,Nothing}=nothing)::Volume3D{T,N}  where {T,N}
@@ -74,6 +79,8 @@ end
     GridTransform(vol::V)
 
 Create GridTransform from Volume3D, assume it is a vector field
+
+* `vol` - Volume3D with 4D array containing vector field
 """
 function GridTransform(vol::V) where {V<:Volume3D}
     return GridTransform(vol.v2w, vol.vol)
@@ -84,13 +91,19 @@ end
     InverseGridTransform(vol::V)
 
 Create InverseGridTransform from Volume3D, assume it is a vector field
+
+* `vol` - Volume3D with 4D array containing vector field
 """
 function InverseGridTransform(vol::V) where {V<:Volume3D}
     return InverseGridTransform(vol.v2w, vol.vol)
 end
 
 
-# Print Volume3D info
+"""
+    Base.show(io::IO, z::Volume3D{T,N})
+
+Print Volume3D info
+"""
 Base.show(io::IO, z::Volume3D{T,N}) where {T,N} = print(io, "Volume3D{$(T),$(N)}:", size(z.vol)," ", z.v2w)
 
 
@@ -98,6 +111,9 @@ Base.show(io::IO, z::Volume3D{T,N}) where {T,N} = print(io, "Volume3D{$(T),$(N)}
     read_volume(fn::String; store::Type{T}=Float64)::Volume3D{T}
 
 Read Volume3D from minc file
+
+* `fn` - filename
+* `store` - underlying array type
 """
 function read_volume(fn::String; store::Type{T}=Float64)::Volume3D{T} where {T}
     in_vol,in_hdr,in_store_hdr,in_history = read_minc_volume_std_history(fn, store)
@@ -113,6 +129,9 @@ end
             store::Type{T}=Float64, history=nothing)::Volume3D{T}
 
 Create an empty Volume3D
+
+* `fn` - filename of a minc file that is used for sampling information
+* `store` - underlying array type
 """
 function empty_volume_like(
         fn::String; 
@@ -131,6 +150,10 @@ end
         history=nothing)
 
 Create an empty Volume3D
+
+* `vol` - Volume3D that is used for sampling information
+* `store` - underlying array type
+* `history` - minc history
 """
 function empty_volume_like(
         vol::Volume3D{T1,N}; 
@@ -148,6 +171,10 @@ end
         history=nothing)
 
 Save Volume3D to minc file
+
+* `fn` - filename
+* `vol` - Volume3D to save
+* `store` - underlying MINC data type, to be used for storage
 """
 function save_volume(fn::AbstractString, 
         vol::Volume3D{T,N}; 
@@ -180,6 +207,16 @@ end
 
 Resample 4D array using transformation,
 assume 1st dimension is non spatial (vector dimension)
+
+* `in_vol` - input 4D array
+* `out_vol` - output 4D array
+* `v2w` - voxel to world affine transform in the output array
+* `w2v` - world to voxel affine transform in the input array
+* `itfm` - inverse of the  transformation to apply (i.e from output to input)
+* `interp` - interpolation method
+* `fill` - fill value
+* `ftol` - tolerance, for inverse transformations
+* `max_iter` - maximum number of iterations, for inverse transformations
 """
 function resample_grid_volume!(
         in_vol::AbstractArray{T,4},
@@ -216,6 +253,10 @@ end
 
 Resample Volume3D that contain 4D array,
 using transformation, assume 1st dimension is non spatial
+
+* `in_grid` - input Volume3D with 4D array describing vector field
+* `itfm` - inverse of the  transformation to apply (i.e from output to input)
+* `like` - Volume3D that is used for sampling information
 """
 function resample_grid(
         in_grid::Volume3D{T,4}, 
@@ -244,6 +285,12 @@ end
 
 Convert arbitrary transformation 
 into vector field
+
+* `tfm` - transformation to use
+* `grid` - output 4D array, will contain vector field
+* `v2w` - voxel to world affine transform in the output array
+* `ftol` - tolerance, for inverse transformations
+* `max_iter` - maximum number of iterations, for inverse transformations
 """
 function tfm_to_grid!(
         tfm::Union{Vector{XFM}, XFM}, 
@@ -268,6 +315,11 @@ end
 
 Convert arbitrary transformation 
 into Volume3D with 4D array containing vector field
+
+* `tfm` - transformation to use
+* `v2w` - voxel to world affine transform in the output array
+* `ftol` - tolerance, for inverse transformations
+* `max_iter` - maximum number of iterations, for inverse transformations
 """
 function tfm_to_grid(
         tfm::Union{Vector{XFM}, XFM},
@@ -292,15 +344,20 @@ end
         ref::G;
         store::Type{T}=Float64,ftol=1.0/80,max_iter=10)::GridTransform{Float64,T}
 
-Convert arbitrary transformation 
-into a single GridTransform
+Convert arbitrary transformation  into a single GridTransform
+
+* `tfm` - transformation to use
+* `ref` - GridTransform that is used for sampling information
+* `store` - underlying array type
+* `ftol` - tolerance, for inverse transformations
+* `max_iter` - maximum number of iterations, for inverse transformations
 """
 function normalize_tfm(tfm::Union{Vector{XFM}, XFM},
         ref::G;
         store::Type{T}=Float64,ftol=1.0/80,max_iter=10)::GridTransform{Float64,T} where {T, XFM<:AnyTransform, G<:GridTransform}
 
     out_grid = similar(ref.vector_field, store)
-    v2w = ref.voxel_to_world
+    v2w = voxel_to_world(ref)
 
     tfm_to_grid!(tfm,out_grid,v2w;ftol,max_iter)
 
@@ -313,15 +370,20 @@ end
         ref::G;
         store::Type{T}=Float64,ftol=1.0/80,max_iter=10)::GridTransform{Float64,T}
 
-Convert arbitrary transformation 
-into a single GridTransform
+Convert arbitrary transformation  into a single GridTransform
+
+* `tfm` - transformation to use
+* `ref` - Volume3D that is used for sampling information
+* `store` - underlying array type
+* `ftol` - tolerance, for inverse transformations
+* `max_iter` - maximum number of iterations, for inverse transformations
 """
 function normalize_tfm(tfm::Union{Vector{XFM}, XFM},
         ref::G;
         store::Type{T}=Float64,ftol=1.0/80,max_iter=10)::GridTransform{Float64,T} where {T, XFM<:AnyTransform, G<:Volume3D}
 
     out_grid = similar(ref.vol, store)
-    v2w = ref.v2w
+    v2w = voxel_to_world(ref)
 
     tfm_to_grid!(tfm, out_grid, v2w;ftol,max_iter)
 
@@ -341,6 +403,16 @@ end
         max_iter=10)
 
 Resample 3D array using transformation 
+
+* `in_vol` - input 3D array
+* `out_vol` - output 3D array
+* `v2w` - voxel to world affine transform in the output array
+* `w2v` - world to voxel affine transform in the input array
+* `itfm` - inverse of the  transformation to apply (i.e from output to input)
+* `interp` - interpolation method
+* `fill` - fill value
+* `ftol` - tolerance, for inverse transformations
+* `max_iter` - maximum number of iterations, for inverse transformations
 """
 function resample_volume!(in_vol::AbstractArray{T,3}, 
         out_vol::AbstractArray{T,3}, 
@@ -378,6 +450,14 @@ end
         max_iter=10)::Volume3D{O,3}
 
 Resample Volume3D using transformation 
+* `in_vol` - input Volume3D
+* `out_vol` - output Volume3D
+* `itfm` - inverse of the  transformation to apply (i.e from output to input)
+* `tfm`  - transformation to apply (i.e from output to input) (instead of `itfm`)
+* `interp` - interpolation method
+* `fill` - fill value
+* `ftol` - tolerance, for inverse transformations
+* `max_iter` - maximum number of iterations, for inverse transformations
 """
 function resample_volume!(
         in_vol::Volume3D{T,3}, 
@@ -438,6 +518,15 @@ end
         max_iter=10)::Volume3D 
 
 Resample Volume3D using transformation 
+
+* `in_vol` - input Volume3D
+* `like` - Volume3D that is used for sampling information
+* `itfm` - inverse of the  transformation to apply (i.e from output to input)
+* `tfm`  - transformation to apply (i.e from output to input) (instead of `itfm`)
+* `interp` - interpolation method
+* `fill` - fill value
+* `ftol` - tolerance, for inverse transformations
+* `max_iter` - maximum number of iterations, for inverse transformations
 """
 function resample_volume(
         in_vol::Volume3D{T,3};
@@ -511,6 +600,13 @@ end
         max_iter=10)
 
 Calculate dense jacobian determinant field for an arbitrary transformation
+
+* `tfm`  - transformation to use
+* `out_vol` - output 3D array
+* `out_v2w` - voxel to world affine transform in the output array
+* `interp` - interpolation method
+* `ftol` - tolerance, for inverse transformations
+* `max_iter` - maximum number of iterations, for inverse transformations
 """
 function calculate_jacobian!(
         tfm::Union{Vector{XFM},XFM},
@@ -556,6 +652,12 @@ end
         max_iter=10)::Volume3D{T,3}
 
 Calculate dense jacobian determinant field for an arbitrary transformation
+
+* `tfm`  - transformation to use
+* `out_vol` - output Volume3D
+* `interp` - interpolation method
+* `ftol` - tolerance, for inverse transformations
+* `max_iter` - maximum number of iterations, for inverse transformations
 """
 function calculate_jacobian!(
         tfm::Union{Vector{XFM},XFM}, 

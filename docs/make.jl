@@ -1,11 +1,14 @@
 using Documenter
 using Minc2
 
+DocMeta.setdocmeta!(Minc2, :DocTestSetup, :(using Minc2); recursive=true)
+
 makedocs(
     sitename = "Minc2.jl",
+    authors  = "Vladimir S FONOV vladimir.fonov@gmail.com",
     format   = Documenter.HTML(size_threshold = nothing,),
     modules  = [Minc2],
-    doctest = false,
+    doctest  = false,
     warnonly = true,
     clean    = true,
     pages    = [

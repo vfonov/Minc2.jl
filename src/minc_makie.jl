@@ -12,6 +12,15 @@
             nslices = 4)
 
 Draws a segmentation `seg` on top of `anat` in a grid layout `layout`
+
+* `layout` is a grid layout
+* `anat` is a Volume3D with anatomical image
+* `seg` is a Volume3D with discrete segemntations
+* `labels` is a dictionary of labels to show
+* `cmap` is a color map to use
+* `levels` is a list of levels of `anat` to use for contours
+* `show_colorbar` is a boolean flag to show colorbar
+* `nslices` is a number of slices to show
 """
 function draw_outline_with_labels(
         layout, 
@@ -88,6 +97,15 @@ end
         nslices=4)
 
 Draws a heatmap of `heat` on top of `anat` in a grid layout `layout`.
+
+* `layout` is a grid layout
+* `anat` is a Volume3D with anatomical image
+* `heat` is a Volume3D with overlay heatmap
+* `heat_limits` limits for the heatmap
+* `cmap` is a color map to use
+* `levels` is a list of levels of `anat` to use for contours
+* `show_colorbar` is a boolean flag to show colorbar
+* `nslices` is a number of slices to show
 """
 function draw_outline_with_heatmap(
     layout, anat, heat; 
