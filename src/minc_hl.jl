@@ -617,19 +617,19 @@ function calculate_jacobian!(
         max_iter=10) where {C,T,I,XFM<:AnyTransform}
 
     # calculate scaling matrix from the voxel to world matrix
+    # to compensate for the step size (makes no difference on 1x1x1 voxels)
     _,step,_ = decompose(out_v2w)
-    sc = diagm(step) #Base.inv(v2w.rot * Base.inv(dir_cos))
-    #@info "Scaling matrix" sc
+    sc = diagm(inv.(step)) 
 
     # First step: generate vector field of transformations
     vector_field = Array{T}(undef, 3, size(out_vol)...)
     @inbounds let 
-    @simd for c in CartesianIndices(out_vol)
-        orig = transform_point(out_v2w, c )
-        dst  = transform_point(tfm, orig; ftol, max_iter )
+        @simd for c in CartesianIndices(out_vol)
+            orig = transform_point(out_v2w, c )
+            dst  = transform_point(tfm, orig; ftol, max_iter )
 
-        vector_field[:,c] .= dst # .- orig
-    end
+            vector_field[:,c] .= dst # .- orig # mincblob convention (?)
+        end
     end
     # Second step: calculate jacobian determinant 
     vector_field_itp = extrapolate( interpolate( vector_field, 
