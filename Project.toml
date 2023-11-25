@@ -17,7 +17,7 @@ libminc_jll = "dce2f2bf-0ed4-5a0e-8af7-a90b827a9344"
 
 [compat]
 CBinding = "1"
-Interpolations = "0.14"
+Interpolations = "0.14, 0.15"
 NIfTI = "0.6"
 Requires = "1"
 Rotations = "1.6"
