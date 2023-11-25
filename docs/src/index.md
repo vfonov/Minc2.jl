@@ -31,7 +31,7 @@ Output `mean(Minc2.array(icbm)) = 29.61005194874031`
 
 ```@docs
 Minc2.read_volume
-Minc2.array(::Minc2.Volume3D)
+Minc2.array(vol::Minc2.Volume3D)
 ```
 
 

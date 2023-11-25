@@ -44,6 +44,14 @@ array(vol::Volume3D) = vol.vol
 
 
 """
+    history(vol::Volume3D)
+
+Extract history metadata
+"""
+history(vol::Volume3D) = vol.history
+
+
+"""
     Volume3D(vol::Array{T,N}, v2w::AffineTransform{Float64}; 
         history::Union{AbstractString,Nothing}=nothing)::Volume3D{T,N}
 
@@ -162,6 +170,52 @@ function empty_volume_like(
     out_vol = similar(vol.vol, store)
     return Volume3D(out_vol, vol.v2w, isnothing(history) ? vol.history : history )
 end
+
+
+"""
+    full_volume_like(
+            fn::String,
+            fill::T=zero(T); 
+            store::Type{T}=Float64, history=nothing)::Volume3D{T}
+
+Create an empty Volume3D
+
+* `fn` - filename of a minc file that is used for sampling information
+* `store` - underlying array type
+"""
+function full_volume_like(
+        fn::String, fill::T=zero(T);
+        store::Type{T}=Float64, history=nothing)::Volume3D{T} where {T}
+    out_vol,out_hdr, out_store_hdr, ref_history = empty_like_minc_volume_std_history(fn,store)
+    v2w=voxel_to_world(out_hdr)
+    v=Volume3D(out_vol, v2w, isnothing(history) ? ref_history : history)
+    v.vol .= fill
+    return v
+end
+
+
+"""
+    empty_volume_like(
+        vol::Volume3D{T1,N}; 
+        store::Type{T}=Float64, 
+        history=nothing)
+
+Create an empty Volume3D
+
+* `vol` - Volume3D that is used for sampling information
+* `store` - underlying array type
+* `history` - minc history
+"""
+function full_volume_like(
+        vol::Volume3D{T1,N},fill::T=zero(T); 
+        store::Type{T}=Float64, 
+        history=nothing) where {T1,T,N}
+    out_vol = similar(vol.vol, store)
+    v= Volume3D(out_vol, vol.v2w, isnothing(history) ? vol.history : history )
+    v.vol .= fill
+    return v
+end
+
 
 
 """
@@ -547,42 +601,46 @@ end
 
 
 """
-Reshape Volume3D
-Work in progress
-DO NOT USE
+    crop_volume(in_vol::Volume3D{T,N},crop;
+        fill_val::T=zero(T))::Volume3D{T,N}
+
+Crop (or pad) a volume
+
+* `in_vol` - input Volume3D
+* `crop` - crop specification, e.g. `[(1,2),(3,4),(5,6)]` , negative values mean padding
 """
-function reshape_volume(
-        in_vol::Volume3D{T,N};
-        dimrange=nothing,
+function crop_volume(in_vol::Volume3D{T,N},crop;
         fill_val::T=zero(T))::Volume3D{T,N} where {T,N}
 
     sz = size(in_vol.vol)
-    if !isnothing(dimrange)
-        @assert ndims(in_vol.vol) == length(dimrange) "Unequal dimrange size"
-
-        new_sz    = [ sz[j] + -i[1]+i[2]                              for (j,i) in enumerate(dimrange)]
-        in_range  = [(max(i[1]+1,1) : min(i[2]+sz[j],     sz[j]))     for (j,i) in enumerate(dimrange)]
-        out_range = [(max(-i[1]+1,1): min(-i[2]+new_sz[j],new_sz[j])) for (j,i) in enumerate(dimrange)]
-    else
-        new_sz = sz
-        in_range  = [(1:i) for i in sz]
-        out_range = [(1:i) for i in sz]
-    end
-
     if N==4 # we have vector dimension (?)
         shift=1
     else
         shift=0
     end
+
+    @assert (ndims(in_vol.vol)-shift) == length(crop) "Unequal dimrange size"
+
+    new_sz    = [ sz[j+shift]-i[1]-i[2] for (j,i) in enumerate(crop)]
+
+    in_range  = [(max(i[1]+1,1) : min(sz[j+shift]-i[2], sz[j+shift])) for (j,i) in enumerate(crop)]
+    out_range = [(max(-i[1]+1,1): min(new_sz[j]+i[2],     new_sz[j])) for (j,i) in enumerate(crop)]
+
+    if shift == 1
+        new_sz    = [1;new_sz]
+        in_range  = [1:sz[1]; in_range]
+        out_range = [1:sz[1]; out_range]
+    end
+
     old_v2w = voxel_to_world(in_vol)
     #start,step,dir_cos = decompose(in_vol.v2w)
-    new_start = transform_point(old_v2w, SVector{3,Float64}( [dimrange[i+shift][1] for i in 1:(N-shift)]))
+    new_start = transform_point(old_v2w, SVector{3,Float64}( [crop[i][1] for i in 1:(N-shift)]))
     old_start = transform_point(old_v2w, SVector{3,Float64}( [0.0,0.0,0.0] ) )
 
-    coord_shift = new_start-old_start
+    coord_shift = new_start - old_start
     out_array = fill(fill_val, new_sz...)
 
-    @info "new" out_range,in_range
+    @show new_sz out_range in_range
 
     out_array[out_range...] .= in_vol.vol[in_range...]
 
@@ -669,6 +727,36 @@ function calculate_jacobian!(
     calculate_jacobian!(tfm, out_vol.vol,out_vol.v2w;interp,ftol,max_iter) 
     return out_vol
 end
+
+
+"""
+    calculate_jacobian(
+        tfm::Union{Vector{XFM},XFM};
+        like::Volume3D{T,3}; 
+        interp::I=BSpline(Quadratic(Line(OnCell()))),
+        ftol=1.0/80,
+        max_iter=10)::Volume3D{T,3}
+
+Calculate dense jacobian determinant field for an arbitrary transformation
+
+* `tfm`  - transformation to use
+* `out_vol` - output Volume3D
+* `interp` - interpolation method
+* `ftol` - tolerance, for inverse transformations
+* `max_iter` - maximum number of iterations, for inverse transformations
+"""
+function calculate_jacobian(
+        tfm::Union{Vector{XFM},XFM}, 
+        like::Volume3D{T,3}; 
+        interp::I=BSpline(Quadratic(Line(OnCell()))),
+        ftol=1.0/80,
+        max_iter=10)::Volume3D{T,3} where {T,I,XFM<:AnyTransform}
+
+    out_vol=empty_volume_like(like)
+    calculate_jacobian!(tfm, out_vol.vol,out_vol.v2w;interp,ftol,max_iter) 
+    return out_vol
+end
+
 
 
 """

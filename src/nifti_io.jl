@@ -111,7 +111,7 @@ end
 
 Write ANTs style warp transform
 """
-function write_itk_nifti_transform(fn::AbstractString,
+function save_itk_nifti_transform(fn::AbstractString,
         xfm::Minc2.GridTransform{Float64,T}; store::Type{S}=Float32) where {T,S}
     save_nifti_volume(fn,Volume3D( permutedims(xfm.vector_field[:,:,:,:,:],(2,3,4,5,1)), xfm.voxel_to_world);store)
 end
@@ -199,12 +199,12 @@ end
 
 
 """
-    write_itk_txt_transform(fn::AbstractString,
+    save_itk_txt_transform(fn::AbstractString,
         xfm::Minc2.AffineTransform{Float64})
 
 Write affine transform in ITK .txt format
 """
-function write_itk_txt_transform(fn::AbstractString,
+function save_itk_txt_transform(fn::AbstractString,
         xfm::Minc2.AffineTransform{Float64})
     # TODO: preserve fixed parameters?
     fixed_parameters = zeros(3) 

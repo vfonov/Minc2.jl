@@ -218,6 +218,16 @@ function load_transforms(fname::String)::Vector{AnyTransform}
 end
 
 """
+    read_transforms(fname::String)::Vector{AnyTransform} 
+
+Read transformations from .xfm file `fname`
+"""
+function read_transforms(fname::String)::Vector{AnyTransform} 
+    load_transforms(fname)
+end
+
+
+"""
     save_transforms(fname::String, 
         xfm::Union{Vector{XFM}, XFM};
         grid_store::Type{T}=Float32 ) where {T, XFM<:AnyTransform}

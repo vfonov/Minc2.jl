@@ -187,7 +187,7 @@ end
         xfm = Minc2.read_itk_txt_transform("input/ants_linear.txt")
         @test xfm isa Minc2.AffineTransform
 
-        Minc2.write_itk_txt_transform(joinpath(tmp,"test_ants_linear.txt"),xfm)
+        Minc2.save_itk_txt_transform(joinpath(tmp,"test_ants_linear.txt"),xfm)
         xfm2 = Minc2.read_itk_txt_transform(joinpath(tmp,"test_ants_linear.txt"))
         @test xfm2 isa Minc2.AffineTransform
         @test xfm.rot ≈ xfm2.rot
@@ -196,7 +196,7 @@ end
         # nonlinear warp
         grid_xfm = Minc2.read_itk_nifti_transform("input/ADNI_fixed_MNI-ICBM152_moving_setting_is_fastfortesting1Warp.nii.gz")
         @test grid_xfm isa Minc2.GridTransform
-        Minc2.write_itk_nifti_transform(joinpath(tmp,"test_ants_warp.nii.gz"),grid_xfm)
+        Minc2.save_itk_nifti_transform(joinpath(tmp,"test_ants_warp.nii.gz"),grid_xfm)
         grid2_xfm = Minc2.read_itk_nifti_transform(joinpath(tmp,"test_ants_warp.nii.gz"))
         @test grid2_xfm isa Minc2.GridTransform
 
