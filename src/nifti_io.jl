@@ -106,7 +106,7 @@ end
 
 
 """
-    write_itk_nifti_transform(fn::AbstractString,
+    save_itk_nifti_transform(fn::AbstractString,
         xfm::Minc2.GridTransform{Float64,T}; store::Type{S}=Float32)
 
 Write ANTs style warp transform
