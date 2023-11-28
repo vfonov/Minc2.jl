@@ -195,7 +195,7 @@ end
 
 
 """
-    empty_volume_like(
+    full_volume_like(
         vol::Volume3D{T1,N}; 
         store::Type{T}=Float64, 
         history=nothing)
@@ -512,6 +512,9 @@ Resample Volume3D using transformation
 * `fill` - fill value
 * `ftol` - tolerance, for inverse transformations
 * `max_iter` - maximum number of iterations, for inverse transformations
+
+Equivalent to `mincresample` minc command
+
 """
 function resample_volume!(
         in_vol::Volume3D{T,3}, 
@@ -581,6 +584,8 @@ Resample Volume3D using transformation
 * `fill` - fill value
 * `ftol` - tolerance, for inverse transformations
 * `max_iter` - maximum number of iterations, for inverse transformations
+
+Equivalent to `mincresample` minc command
 """
 function resample_volume(
         in_vol::Volume3D{T,3};
@@ -607,7 +612,8 @@ end
 Crop (or pad) a volume
 
 * `in_vol` - input Volume3D
-* `crop` - crop specification, e.g. `[(1,2),(3,4),(5,6)]` , negative values mean padding
+* `crop` - crop specification for each direction, 
+    e.g. `[(10,10),(20,20),(5,10)]` , negative values mean padding
 """
 function crop_volume(in_vol::Volume3D{T,N},crop;
         fill_val::T=zero(T))::Volume3D{T,N} where {T,N}
@@ -640,8 +646,6 @@ function crop_volume(in_vol::Volume3D{T,N},crop;
     coord_shift = new_start - old_start
     out_array = fill(fill_val, new_sz...)
 
-    @show new_sz out_range in_range
-
     out_array[out_range...] .= in_vol.vol[in_range...]
 
     return Volume3D(out_array, AffineTransform(old_v2w.rot, old_v2w.shift+coord_shift))
@@ -665,6 +669,9 @@ Calculate dense jacobian determinant field for an arbitrary transformation
 * `interp` - interpolation method
 * `ftol` - tolerance, for inverse transformations
 * `max_iter` - maximum number of iterations, for inverse transformations
+
+
+Roughly equivalent to `mincblob` minc command
 """
 function calculate_jacobian!(
         tfm::Union{Vector{XFM},XFM},
@@ -677,7 +684,7 @@ function calculate_jacobian!(
     # calculate scaling matrix from the voxel to world matrix
     # to compensate for the step size (makes no difference on 1x1x1 voxels)
     _,step,_ = decompose(out_v2w)
-    sc = diagm(inv.(step)) 
+    sc = diagm(Base.inv.(step)) 
 
     # First step: generate vector field of transformations
     vector_field = Array{T}(undef, 3, size(out_vol)...)
@@ -716,6 +723,8 @@ Calculate dense jacobian determinant field for an arbitrary transformation
 * `interp` - interpolation method
 * `ftol` - tolerance, for inverse transformations
 * `max_iter` - maximum number of iterations, for inverse transformations
+
+Roughly equivalent to `mincblob` minc command
 """
 function calculate_jacobian!(
         tfm::Union{Vector{XFM},XFM}, 
@@ -744,6 +753,8 @@ Calculate dense jacobian determinant field for an arbitrary transformation
 * `interp` - interpolation method
 * `ftol` - tolerance, for inverse transformations
 * `max_iter` - maximum number of iterations, for inverse transformations
+
+Roughly equivalent to `mincblob` minc command
 """
 function calculate_jacobian(
         tfm::Union{Vector{XFM},XFM}, 
