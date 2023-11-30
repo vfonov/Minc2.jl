@@ -1,5 +1,9 @@
 ```@meta
 CurrentModule = Minc2
+
+DocTestSetup  = quote
+    using Minc2
+end
 ```
 # High level functions for operations on MRI scans
 
@@ -7,7 +11,6 @@ CurrentModule = Minc2
 Modules = [Minc2]
 Pages = [
     "minc_hl.jl",
-    "minc_makie.jl",
     "nifti_io.jl",
 ]
 Order   = [:macro, :function, :type, :constant, ]
@@ -81,5 +84,5 @@ Minc2.calculate_jacobian!
 Minc2.GridTransform
 Minc2.InverseGridTransform
 Minc2.tfm_to_grid
-normalize_tfm
+Minc2.normalize_tfm
 ```

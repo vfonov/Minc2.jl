@@ -1,3 +1,11 @@
+```@meta
+CurrentModule = Minc2
+
+DocTestSetup  = quote
+    using Minc2
+end
+```
+
 # MINC2 for Julia
 
 [![CI](https://github.com/vfonov/Minc2.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/vfonov/Minc2.jl/actions/workflows/CI.yml)
@@ -28,11 +36,6 @@ icbm=Minc2.read_volume("mni_icbm152_t1_tal_nlin_sym_09c.mnc", store=Float64)
 ```
 
 Output `mean(Minc2.array(icbm)) = 29.61005194874031`
-
-```@docs
-Minc2.read_volume
-Minc2.array(vol::Minc2.Volume3D)
-```
 
 
 ### Read a 3D volume with real values, and another one with mask labels and show statistics per label
@@ -83,12 +86,6 @@ transformed_icbm=Minc2.resample_volume(icbm; tfm, order=2, fill=0.0)
 Minc2.save_volume("transformed_icbm.mnc",transformed_icbm, store=UInt16, history="Julia example")
 ```
 
-```@docs
-Minc2.load_transforms(::String)
-Minc2.resample_volume
-Minc2.save_volume
-```
-
 
 ### Integrate jacobians per ROI, based on a transformation in .xfm file
 
@@ -115,12 +112,6 @@ Minc2.calculate_jacobian!(tfm, jacobians)
 for (i,l) in [1=>"ROI-1",2=>"ROI-2",3=>"ROI-3"]
     println("$(l):$( sum((Minc2.array(rois) .== i) .* Minc2.array(jac) )*voxel_volume)")
 end
-```
-
-```@docs
-Minc2.decompose
-Minc2.empty_volume_like
-Minc2.calculate_jacobian!
 ```
 
 
@@ -154,11 +145,6 @@ Will produce
 ![MNI-ICBM152](https://github.com/vfonov/Minc2.jl/blob/main/docs/src/assets/mni_icbm152_segmentation.png?raw=true)
 
 
-```@docs
-Minc2.draw_outline_with_labels
-```
-
-
 ### Show MNI-ICBM152 template contours with GM proability map
 
 ```julia
@@ -188,10 +174,6 @@ save("mni_icbm152_gm.png", fig, px_per_unit = 1)
 Will produce
 ![MNI-ICBM152](https://github.com/vfonov/Minc2.jl/blob/main/docs/src/assets/mni_icbm152_gm.png?raw=true)
 
-```@docs
-Minc2.draw_outline_with_heatmap
-```
-
 
 ## More examples
 
@@ -215,5 +197,3 @@ See `examples` directory for more examples:
 ## Documentation for MINC
 
 Documentations for underlying libminc and minc tools is available at https://en.wikibooks.org/wiki/MINC
-
-

@@ -1,15 +1,16 @@
-##### visualization helpers
+# visualization helpers
+
 
 """
     draw_outline_with_labels(
-            layout, 
-            anat, 
-            seg; 
-            labels, 
-            cmap = :rainbow,
-            levels = [20,30],
-            show_colorbar = true,
-            nslices = 4)
+        layout, 
+        anat, 
+        seg; 
+        labels, 
+        cmap = :rainbow,
+        levels = [20,30],
+        show_colorbar = true,
+        nslices = 4)
 
 Draws a segmentation `seg` on top of `anat` in a grid layout `layout`
 
@@ -88,6 +89,7 @@ function draw_outline_with_labels(
     return gc
 end
 
+
 """
     draw_outline_with_heatmap(
         layout, anat, heat; 
@@ -162,6 +164,7 @@ function draw_outline_with_heatmap(
     Makie.rowgap!(gc, 0)
     return gc
 end
+
 
 """
     draw_outline_with_heatmap_symmetric(

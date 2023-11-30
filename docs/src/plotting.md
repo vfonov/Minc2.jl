@@ -1,6 +1,11 @@
 ```@meta
 CurrentModule = Minc2
+
+DocTestSetup  = quote
+    using Minc2
+end
 ```
+
 # High level functions for plotting 3D volumes
 
 These are helper functions for plotting `Volume3D` objects using Makie. To make them available one must first load `Makie` or equivalent (i.e `CairoMakie`)
