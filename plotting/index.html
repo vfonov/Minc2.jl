@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Plotting functions · Minc2.jl</title><meta name="title" content="Plotting functions · Minc2.jl"/><meta property="og:title" content="Plotting functions · Minc2.jl"/><meta property="twitter:title" content="Plotting functions · Minc2.jl"/><meta name="description" content="Documentation for Minc2.jl."/><meta property="og:description" content="Documentation for Minc2.jl."/><meta property="twitter:description" content="Documentation for Minc2.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Minc2.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Introduction to Minc2.jl</a></li><li><a class="tocitem" href="../high_level/">High level functions</a></li><li class="is-active"><a class="tocitem" href>Plotting functions</a></li><li><a class="tocitem" href="../geo/">Gemetric transformation functions</a></li><li><a class="tocitem" href="../low_level/">Low level functions</a></li><li><a class="tocitem" href="../function_list/">Alphabetical function list</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Plotting functions</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Plotting functions</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/vfonov/Minc2.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/vfonov/Minc2.jl/blob/main/docs/src/plotting.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="High-level-functions-for-plotting-3D-volumes"><a class="docs-heading-anchor" href="#High-level-functions-for-plotting-3D-volumes">High level functions for plotting 3D volumes</a><a id="High-level-functions-for-plotting-3D-volumes-1"></a><a class="docs-heading-anchor-permalink" href="#High-level-functions-for-plotting-3D-volumes" title="Permalink"></a></h1><p>These are helper functions for plotting <code>Volume3D</code> objects using Makie. To make them available one must first load <code>Makie</code> or equivalent (i.e <code>CairoMakie</code>)</p><h3 id="Show-MNI-ICBM152-template-contours-with-tissue-masks-overlays"><a class="docs-heading-anchor" href="#Show-MNI-ICBM152-template-contours-with-tissue-masks-overlays">Show MNI-ICBM152 template contours with tissue masks overlays</a><a id="Show-MNI-ICBM152-template-contours-with-tissue-masks-overlays-1"></a><a class="docs-heading-anchor-permalink" href="#Show-MNI-ICBM152-template-contours-with-tissue-masks-overlays" title="Permalink"></a></h3><pre><code class="language-julia hljs">using CairoMakie
+using Minc2
+
+# read T1w scan
+icbm=Minc2.read_volume(&quot;mni_icbm152_t1_tal_nlin_sym_09c.mnc&quot;, store=Float64)
+# read label mask, represent it as array of bytes 
+lab=Minc2.read_volume(&quot;mni_icbm152_cls_tal_nlin_sym_09c.mnc&quot;, store=UInt8)
+
+
+fig = Figure()
+gc = fig[1, 1] = GridLayout()
+
+Minc2.draw_outline_with_labels(gc, icbm, lab, 
+    labels=Dict([1=&gt;&quot;CSF&quot;,2=&gt;&quot;GM&quot;,3=&gt;&quot;WM&quot;]),
+    nslices = 5)
+
+resize_to_layout!(fig)
+
+save(&quot;mni_icbm152_segmentation.png&quot;, fig, px_per_unit = 1)</code></pre><p>Will produce <img src="https://github.com/vfonov/Minc2.jl/blob/main/docs/src/assets/mni_icbm152_segmentation.png?raw=true" alt="MNI-ICBM152 Segmentation"/></p><div class="admonition is-warning"><header class="admonition-header">Missing docstring.</header><div class="admonition-body"><p>Missing docstring for <code>Minc2.draw_outline_with_labels</code>. Check Documenter&#39;s build log for details.</p></div></div><h3 id="Show-MNI-ICBM152-template-contours-with-GM-proability-map"><a class="docs-heading-anchor" href="#Show-MNI-ICBM152-template-contours-with-GM-proability-map">Show MNI-ICBM152 template contours with GM proability map</a><a id="Show-MNI-ICBM152-template-contours-with-GM-proability-map-1"></a><a class="docs-heading-anchor-permalink" href="#Show-MNI-ICBM152-template-contours-with-GM-proability-map" title="Permalink"></a></h3><pre><code class="language-julia hljs">using CairoMakie
+using Minc2
+
+# read T1w scan
+anat=Minc2.read_volume(&quot;mni_icbm152_t1_tal_nlin_sym_09c.mnc&quot;,store=Float64)
+# read field
+gm=Minc2.read_volume(&quot;mni_icbm152_gm_tal_nlin_sym_09c.mnc&quot;,store=Float64)
+
+fig = Figure()
+gc = fig[1, 1] = GridLayout()
+
+# set background to transparent
+Minc2.array(gm)[Minc2.array(gm) .&lt; 1e-6] .= NaN
+
+Minc2.draw_outline_with_heatmap(gc, anat, gm, 
+    heat_limits=(0.0,1.0),cmap=:turbo,
+    nslices = 5)
+
+resize_to_layout!(fig)
+
+save(&quot;mni_icbm152_gm.png&quot;, fig, px_per_unit = 1) </code></pre><p>Will produce <img src="https://github.com/vfonov/Minc2.jl/blob/main/docs/src/assets/mni_icbm152_gm.png?raw=true" alt="MNI-ICBM152 GM"/></p><div class="admonition is-warning"><header class="admonition-header">Missing docstring.</header><div class="admonition-body"><p>Missing docstring for <code>Minc2.draw_outline_with_heatmap</code>. Check Documenter&#39;s build log for details.</p></div></div><h3 id="Show-two-tailed-t-statistics-on-DBM-style-analysis"><a class="docs-heading-anchor" href="#Show-two-tailed-t-statistics-on-DBM-style-analysis">Show two-tailed t-statistics on DBM style analysis</a><a id="Show-two-tailed-t-statistics-on-DBM-style-analysis-1"></a><a class="docs-heading-anchor-permalink" href="#Show-two-tailed-t-statistics-on-DBM-style-analysis" title="Permalink"></a></h3><pre><code class="language-julia hljs">using CairoMakie
+using Minc2
+
+# read T1w scan and crop black area around ROI
+anat=Minc2.crop_volume(
+    Minc2.read_volume(&quot;mni_icbm152_t1_tal_nlin_sym_09c.mnc&quot;,store=Float64),
+    [[15,15],[20,20],[20,20]])
+
+# Read brain ROI, should be the same sampling as anat
+mask=Minc2.crop_volume(
+    Minc2.read_volume(&quot;mni_icbm152_t1_tal_nlin_sym_09c_mask.mnc&quot;,store=UInt8),
+    [[15,15],[20,20],[20,20]])
+
+# read statistics map, does not have to be the same resolution as anat
+vol_t=Minc2.read_volume(&quot;t_AD_vs_CN_2mm.mnc&quot;,store=Float64)
+
+# statistical limits (two-tailed)
+stat_limits  = [2.9 , 5]
+
+# start new figure
+fig = Figure()
+
+g1  = f[1,1] = GridLayout()
+Label(f[1,1,Top()],&quot;AD vs CN-&quot;)
+
+draw_outline_with_heatmap_symmetric(g1, anat, mask, vol_stat;
+    heat_limits=stat_limits,
+    show_colorbar=true,
+    cmap_pos=:YlOrRd_9,cmap_neg=:YlGnBu_9,
+    nslices=5,
+    colorbar_label=&quot;t-statistics&quot;)
+
+resize_to_layout!(fig)
+
+save(&quot;t-statistics.png&quot;, fig, px_per_unit = 1) </code></pre><p><img src="https://github.com/vfonov/Minc2.jl/blob/main/docs/src/assets/t-statistics.png?raw=true" alt="T-statistics"/></p><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="Minc2.draw_outline_with_heatmap_symmetric" href="#Minc2.draw_outline_with_heatmap_symmetric"><code>Minc2.draw_outline_with_heatmap_symmetric</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">draw_outline_with_heatmap_symmetric(
+    layout, anat, mask, heat; 
+    cmap_pos=:YlOrRd_9,
+    cmap_neg=:YlGnBu_9,
+    levels=[20, 40],
+    heat_limits=nothing,
+    show_colorbar=true,
+    under=nothing, 
+    over=nothing,
+    nslices=4,
+    alpha=0.7,
+    colorbar_label=&quot;&quot;,
+    slices_gap=5,
+    colorbar_gap=10)</code></pre><p>Draws a two-sided (symmetric positive and negative) heatmap of <code>heat</code> on top of <code>anat</code> in a grid layout <code>layout</code>.</p><ul><li><code>layout</code> is a grid layout</li><li><code>anat</code> is a Volume3D with anatomical image</li><li><code>mask</code> is a Volume3D with ROI</li><li><code>heat</code> is a Volume3D with overlay heatmap, can be arbitrary sampling</li><li><code>heat_limits</code> limits for the heatmap</li><li><code>cmap_pos</code> is a color map to use for positive values, if nothing then don&#39;t show positive values</li><li><code>cmap_neg</code> is a color map to use for negative values, if nothing then don&#39;t show negative values</li><li><code>levels</code> is a list of levels of <code>anat</code> to use for contours</li><li><code>show_colorbar</code> is a boolean flag to show colorbar</li><li><code>colorbar_label</code> is a label for the colorbar</li><li><code>nslices</code> is a number of slices to show</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/vfonov/Minc2.jl/blob/eae872fcc90bbd19a7003aeaf645ad10da39b4ab/src/minc_makie.jl#L166-L195">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../high_level/">« High level functions</a><a class="docs-footer-nextpage" href="../geo/">Gemetric transformation functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.0 on <span class="colophon-date" title="Thursday 30 November 2023 04:52">Thursday 30 November 2023</span>. Using Julia version 1.6.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
