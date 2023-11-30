@@ -5,6 +5,7 @@ DocTestSetup  = quote
     using Minc2
 end
 ```
+
 # Index
 
 ```@index

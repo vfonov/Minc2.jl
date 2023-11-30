@@ -331,6 +331,30 @@ end
 
 
 """
+    resample_grid!(
+        in_grid::Volume3D{T,4},
+        out_grid::Volume3D{T,4},
+        itfm::Union{Vector{XFM}, XFM}=nothing)::Volume3D{T,4}
+
+Resample Volume3D that contain 4D array,
+using transformation, assume 1st dimension is non spatial
+
+* `in_grid` - input Volume3D with 4D array describing vector field
+* `itfm` - inverse of the  transformation to apply (i.e from output to input)
+* `like` - Volume3D that is used for sampling information
+"""
+function resample_grid!(
+        in_grid::Volume3D{T,4},
+        out_grid::Volume3D{T,4},
+        itfm::Union{Vector{XFM}, XFM}=nothing)::Volume3D{T,4} where {T,L, XFM<:AnyTransform}
+
+    resample_grid_volume!(in_grid.vol, out_grid.vol, in_grid.v2w, inv(out_grid.v2w), itfm; 
+        interp=BSpline(Linear()))
+    return Volume3D(out_vol, v2w)
+end
+
+
+"""
     tfm_to_grid!(
         tfm::Union{Vector{XFM}, XFM}, 
         grid::AbstractArray{T,4},

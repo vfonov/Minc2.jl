@@ -5,16 +5,8 @@ DocTestSetup  = quote
     using Minc2
 end
 ```
-# High level functions for operations on MRI scans
 
-<!-- ```@autodocs
-Modules = [Minc2]
-Pages = [
-    "minc_hl.jl",
-    "nifti_io.jl",
-]
-Order   = [:macro, :function, :type, :constant, ]
-``` -->
+# High level functions for operations on MRI scans
 
 ## 3D Volume information
 
