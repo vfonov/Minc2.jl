@@ -346,7 +346,7 @@ using transformation, assume 1st dimension is non spatial
 function resample_grid!(
         in_grid::Volume3D{T,4},
         out_grid::Volume3D{T,4},
-        itfm::Union{Vector{XFM}, XFM}=nothing)::Volume3D{T,4} where {T,L, XFM<:AnyTransform}
+        itfm::Union{Vector{XFM}, XFM}=nothing)::Volume3D{T,4} where {T, XFM<:AnyTransform}
 
     resample_grid_volume!(in_grid.vol, out_grid.vol, in_grid.v2w, inv(out_grid.v2w), itfm; 
         interp=BSpline(Linear()))
