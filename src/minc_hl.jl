@@ -800,6 +800,6 @@ end
 Generate minc-style history from program args
 """
 function format_history(args)::String
-    return Dates.format(now(),"e d u HH:MM:SS YYYY")*">>>"*join(args," ")
+    return Dates.format(now(),"e d u HH:MM:SS YYYY")*">>>"*PROGRAM_FILE*" "*join(args," ")
 end
 
