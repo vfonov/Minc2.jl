@@ -285,7 +285,7 @@ end
         start, step, dir_cos = Minc2.decompose(v2w)
         @test start ≈ SA_F64[-18, 60, -10] atol=1e-4
         @test  step ≈ SA_F64[  1,  1, 1.2] atol=1e-5
-        
+
         @test dir_cos[:,1] ≈ [0.998021217040696, 0.0523040113746069, -0.0348990075895229] atol=1e-6
         @test dir_cos[:,2] ≈ [-0.0517200153907152, 0.998509297133945, 0.0174420051903491] atol=1e-6
         @test dir_cos[:,3] ≈ [0.0357599860692531, -0.0156019939220494, 0.999238610734185] atol=1e-6
@@ -302,8 +302,33 @@ end
 
     @testset "AffineTransform" begin
         xfms = Minc2.load_transforms("input/linear.xfm")
+        @test length(xfms)==1
+        xfm=xfms[1]
+        @test xfm isa Minc2.AffineTransform
+        @test Minc2.transform_point(xfm, SA_F64[0,0,0]) ≈ SA_F64[-0.176377685791353,-1.07878519423042,-0.546123974572532] atol=1e-9
+        @test Minc2.transform_point(xfm, SA_F64[0,10,0]) ≈ SA_F64[-0.072901424071292,8.88340936772789,-0.121799365233295] atol=1e-9
+        @test Minc2.transform_point(xfm, SA_F64[0,0,10]) ≈ SA_F64[-0.129016039943794,-1.02947230651711,9.51151610111107] atol=1e-9
+        @test Minc2.transform_point(xfm, SA_F64[10,10,10]) ≈ SA_F64[9.96594152594497,8.75495294839407,9.92949690428783]   atol=1e-9
+    end
+
+    @testset "NonLinearTransform" begin
+        xfms = Minc2.load_transforms("input/test_nonlinear.xfm")
+        @test length(xfms)==1
+        xfm=xfms[1]
+        @test xfm isa Minc2.GridTransform
+        # grid interpolation algorithms in minc and in Julia are different :(
+        @test Minc2.transform_point(xfm, SA_F64[0,73.4967727661133,-32.4086036682129])    ≈ SA_F64[0.151066607496551,80.9965964661819,-36.0780171315063] atol=0.2
+        @test Minc2.transform_point(xfm, SA_F64[-42.2117652893066,48.4688186645508,52.8470573425293])   ≈ SA_F64[-45.8093159136667,51.4849761254315,57.8832412837079] atol=0.2
+        @test Minc2.transform_point(xfm, SA_F64[43.294116973877,48.4688186645508,52.8470573425293]) ≈ SA_F64[46.4595841478604,50.8305390103988,58.2716356097526]   atol=0.2
+
+        # test invert
+        ixfm=Minc2.inv(xfm)
+        @test Minc2.transform_point(ixfm, SA_F64[0,73.4967727661133,-32.4086036682129])    ≈ SA_F64[-0.18140356051401,66.6279125797094,-29.0028658475105] atol=0.3
+        @test Minc2.transform_point(ixfm, SA_F64[-42.2117652893066,48.4688186645508,52.8470573425293])   ≈ SA_F64[-38.3819344872913, 45.9948061533514, 48.218509626188] atol=0.4
+        @test Minc2.transform_point(ixfm, SA_F64[43.294116973877,48.4688186645508,52.8470573425293]) ≈ SA_F64[39.8429712902809,46.7448946781746,47.7003233054328]   atol=0.3
 
     end
+
 
     # TODO: come up with test for nonlinear transforms
 end
