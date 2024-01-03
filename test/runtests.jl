@@ -328,7 +328,4 @@ end
         @test Minc2.transform_point(ixfm, SA_F64[43.294116973877,48.4688186645508,52.8470573425293]) ≈ SA_F64[39.8429712902809,46.7448946781746,47.7003233054328]   atol=0.3
 
     end
-
-
-    # TODO: come up with test for nonlinear transforms
 end
