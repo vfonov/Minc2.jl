@@ -324,7 +324,7 @@ Apply affine transform to a point
         p::SVector{3,T};
         _whatever...)::SVector{3,T} where {T}
     
-    return (p' * tfm.rot)' + tfm.shift
+    return tfm.rot*p + tfm.shift
 end
 
 
@@ -468,7 +468,7 @@ Apply affine transform to CartesianIndices
         tfm::AffineTransform{T}, 
         p::CartesianIndex{3};
         _whatever...)::SVector{3,T} where {T}
-    ( SVector{3,T}(p[1]-1.0, p[2]-1.0, p[3]-1.0)' * tfm.rot)' + tfm.shift
+    tfm.rot*SVector{3,T}(p[1]-1.0, p[2]-1.0, p[3]-1.0) + tfm.shift
 end
 
 
@@ -487,8 +487,8 @@ function decompose(rot, shift)
     # remove scaling
     dir_cos = f.U * f.Vt
 
-    step  = diag(rot           * Base.inv(dir_cos))
-    start = permutedims(permutedims(shift) * Base.inv(dir_cos))
+    step  = diag(Base.inv(dir_cos) * rot)
+    start = Base.inv(dir_cos)*shift
     
     return start, step, dir_cos
 end

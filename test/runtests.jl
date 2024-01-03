@@ -71,6 +71,7 @@ using StaticArrays
             vol,hdr,store_hdr = Minc2.read_minc_volume_std(i,Float64)
             @test hdr.dims == [30,40,10]
             @test size(vol) == (30,40,10)
+
             # TODO: test hdr too
             if contains(i,"_byte_") || contains(i,"_ubyte_")
                 @test mean(vol) ≈ 35.63256359 atol=0.5
@@ -258,6 +259,50 @@ end
         xfm = Minc2.AffineTransform( [0.0 1.0 0;1.0 0.0 0;0 0 1], [0.0 0.0 0.0])
         @test Minc2.transform_point(xfm, SA_F64[1, 2, 3]) ≈ SA_F64[2, 1, 3]
         @test Minc2.transform_point(Minc2.inv(xfm),SA_F64[1, 2, 3]) ≈ SA_F64[2, 1, 3]
+    end
+
+    # TODO: come up with test for nonlinear transforms
+end
+
+
+
+@testset "Test Spatial coordinates correctness" begin
+    ### TODO: check that  all trasformation works as expected
+    @testset "Low level interface" begin
+        h = Minc2.open_minc_file("input/t1_z+_float_cor.mnc")
+        @test Minc2.voxel_to_world(h, [0.0,0.0,0.0]) ≈ [-21.425182690867980995,59.125105562514228552,-8.3176836593094876093] atol = 1e-9
+        @test Minc2.voxel_to_world(h, [10.0,10.0,10.0]) ≈ [-11.533050841537136222,69.446014720535146125,3.4986096455089885637] atol = 1e-9
+        Minc2.close_minc_file(h)
+    end
+
+    @testset "Oblique volume" begin
+        vol = Minc2.read_volume("input/t1_z+_float_cor.mnc", store=Float64)
+        v2w = Minc2.voxel_to_world(vol)
+
+        @test Minc2.transform_point(v2w, SA_F64[0,0,0] ) ≈ SA_F64[-21.425182690867980995, 59.125105562514228552, -8.3176836593094876093] atol=1e-6
+        @test Minc2.transform_point(v2w, SA_F64[10,10,10] ) ≈ SA_F64[-11.533050841537136222,69.446014720535146125,3.4986096455089885637] atol=1e-6
+
+        start, step, dir_cos = Minc2.decompose(v2w)
+        @test start ≈ SA_F64[-18, 60, -10] atol=1e-4
+        @test  step ≈ SA_F64[  1,  1, 1.2] atol=1e-5
+        
+        @test dir_cos[:,1] ≈ [0.998021217040696, 0.0523040113746069, -0.0348990075895229] atol=1e-6
+        @test dir_cos[:,2] ≈ [-0.0517200153907152, 0.998509297133945, 0.0174420051903491] atol=1e-6
+        @test dir_cos[:,3] ≈ [0.0357599860692531, -0.0156019939220494, 0.999238610734185] atol=1e-6
+        
+        # calculate COM in voxel coordinates
+        arr = Minc2.array(vol)
+        v_com = @SVector [reduce((x,y)->x+arr[y]*(y[i]-1), collect(CartesianIndices(arr));init=0.0)/sum(arr) for i in 1:3]
+        @test v_com ≈ SA_F64[13.72049578,  12.72096456,  4.525147114] atol=1e-3
+        
+        w_com = Minc2.transform_point(v2w, v_com)
+        @test w_com ≈ SA_F64[-8.195582241, 72.46002233, -3.148594157] atol=1e-3
+
+    end
+
+    @testset "AffineTransform" begin
+        xfms = Minc2.load_transforms("input/linear.xfm")
+
     end
 
     # TODO: come up with test for nonlinear transforms

@@ -707,16 +707,16 @@ function voxel_to_world(hdr::MincHeader)::AffineTransform{Float64}
     for i=1:3
         aa=findfirst(isequal(DIM(i)), hdr.axis) # HACK, assumes DIM_X=1,DIM_Y=2 etc
         if hdr.dir_cos_valid[aa]
-            rot[i,1:3] = hdr.dir_cos[aa,1:3]
+            rot[1:3,i] = hdr.dir_cos[aa,1:3]
         else
             rot[i,i] = 1
         end
         scales[i,i] = hdr.step[aa]
         start[i] = hdr.start[aa]
     end
-    origin = permutedims(permutedims(start) * rot)
+    origin = rot*start 
 
-    return AffineTransform(scales*rot, origin)
+    return AffineTransform(rot*scales, origin)
 end
 
 """
@@ -757,7 +757,7 @@ function create_header_from_v2w(
             hdr.start[i] = 0
             hdr.step[i] = 1.0
             hdr.dir_cos_valid[i] = false
-            hdr.dir_cos[i,:] = [0,0,0]
+            hdr.dir_cos[i,:] = [0.0,0.0,0.0]
             hdr.axis[i] = DIM_VEC
         elseif time_dim && (i-vector_dim)==4 # time dimension
             hdr.step[i] = time_step
@@ -766,7 +766,7 @@ function create_header_from_v2w(
         else # spatial dimension
             hdr.start[i] = start[i-vector_dim]
             hdr.step[i] = step[i-vector_dim]
-            hdr.dir_cos[i,:] .= dir_cos[i-vector_dim,:]
+            hdr.dir_cos[i,:] .= dir_cos[:, i-vector_dim]
             hdr.dir_cos_valid[i] = true
             hdr.axis[i] = DIM(i-vector_dim)
         end
@@ -785,7 +785,7 @@ function voxel_to_world(h::VolumeHandle,ijk::Vector{Float64})::Vector{Float64}
     @assert(length(ijk)==3)
     xyz::Vector{Float64}=zeros(Float64,3)
     @minc2_check minc2_simple.minc2_voxel_to_world(h.x[],ijk,xyz)
-    return ijk
+    return xyz
 end
 
 

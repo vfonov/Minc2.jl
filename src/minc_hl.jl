@@ -501,7 +501,7 @@ function resample_volume!(in_vol::AbstractArray{T,3},
         fill=0.0,
         ftol=1.0/80,
         max_iter=10) where {C, T, I, XFM<:AnyTransform}
-
+    
     in_vol_itp = extrapolate( interpolate( in_vol, interp), fill)
     @simd for c in CartesianIndices(out_vol)
         orig = transform_point(v2w, c )
@@ -578,7 +578,7 @@ function resample_volume!(
             end
         end
     end
-
+    
     resample_volume!(in_vol.vol, out_vol.vol, out_vol.v2w, inv(in_vol.v2w), itfm; 
         interp, ftol, max_iter, fill)
 
