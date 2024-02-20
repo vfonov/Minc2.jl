@@ -35,13 +35,19 @@ function read_nifti_volume(fn::AbstractString; store::Type{T}=Float64)::Volume3D
     ni = niread(fn)
 
     #convert volume to a simple volume and afine matrix to the v2w 
-    tfm = Float64.(getaffine(ni.header))
+    tfm = Float64.( getaffine( ni.header ))
 
     # need to flip x,y 
     # to simulate behaviour of ITK
-    # see https://github.com/InsightSoftwareConsortium/ITK/blob/master/Modules/IO/NIFTI/src/itkNiftiImageIO.cxx#L2031
+    # see https://github.com/InsightSoftwareConsortium/ITK/blob/5.4/Modules/IO/NIFTI/src/itkNiftiImageIO.cxx#L2165
+    # and https://github.com/InsightSoftwareConsortium/ITK/blob/5.4/Modules/IO/NIFTI/src/itkNiftiImageIO.cxx#L2182
+    # and https://github.com/InsightSoftwareConsortium/ITK/blob/5.4/Modules/IO/NIFTI/src/itkNiftiImageIO.cxx#L2196
+    #     https://github.com/InsightSoftwareConsortium/ITK/blob/5.4/Modules/IO/NIFTI/src/itkNiftiImageIO.cxx#L2211
+
+    # invert x,y,z directions
     tfm[1:3,1:2] .= tfm[1:3,1:2] .* -1.0
-    tfm[1:2,4]   .= tfm[1:2,4]   .* -1.0
+    # invert x,y origin 
+    tfm[1:2,4]   .= tfm[1:2,  4] .* -1.0
 
     v2w = Minc2.AffineTransform( tfm )
 
@@ -59,11 +65,12 @@ end
 Save Volume3D into .nii or .nii.gz file
 """
 function save_nifti_volume(fn::AbstractString, vol::Volume3D{T}; 
-        store::Type{S}=Float32, history=nothing) where {T,S}
+        store::Type{S}=Float32, history=nothing, intent_code::Integer=Int16(0)) where {T,S}
+
     if isnothing(history)
-        _history=vol.history
+        _history = vol.history
     else
-        _history=vol.history*"\n"*history
+        _history = vol.history * "\n" * history
     end
 
     tfm = [vol.v2w.rot vol.v2w.shift; 0 0 0 1]
@@ -75,16 +82,17 @@ function save_nifti_volume(fn::AbstractString, vol::Volume3D{T};
     R_quat = Rotations.params(QuatRotation(dir_cos))
 
     ni=NIVolume( convert(AbstractArray{S}, vol.vol),
-        qfac=1.0f0,
-        quatern_b=  R_quat[2],  quatern_c=R_quat[3],  quatern_d=R_quat[4],
+        qfac = 1.0f0,
+        quatern_b=R_quat[2],quatern_c=R_quat[3],quatern_d=R_quat[4],
         qoffset_x= start[1], qoffset_y=start[2], qoffset_z=start[3],
-        voxel_size=Tuple(Float32(i) for i in step),
-        xyzt_units=Int8(2),
-        regular=Int8('r'))
+        voxel_size = Tuple(Float32(i) for i in step),
+        xyzt_units = Int8(2),
+        regular = Int8('r'),
+        intent_code = Int16(intent_code),)
     
     #setaffine(ni.header, [vol.v2w.rot vol.v2w.shift;0 0 0 1])
     # TODO: deal with vectors (?)
-    niwrite(fn,ni)
+    niwrite(fn, ni)
 end
 
 
@@ -113,7 +121,7 @@ Write ANTs style warp transform
 """
 function save_itk_nifti_transform(fn::AbstractString,
         xfm::Minc2.GridTransform{Float64,T}; store::Type{S}=Float32) where {T,S}
-    save_nifti_volume(fn,Volume3D( permutedims(xfm.vector_field[:,:,:,:,:],(2,3,4,5,1)), xfm.voxel_to_world);store)
+    save_nifti_volume(fn,Volume3D( permutedims(xfm.vector_field[:,:,:,:,:],(2,3,4,5,1)), xfm.voxel_to_world);store,intent_code=Int16(1007))
 end
 
 
@@ -182,14 +190,15 @@ function read_itk_txt_transform(fn::AbstractString)::Minc2.AffineTransform{Float
         @assert tfm_dims=="3_3"
         @assert length(parameters) == 12
         @assert length(fixed_parameters) == 3
-        rot_matrix   = reshape(parameters[1:9],3,3)
+
+        rot_matrix   = permutedims(reshape(parameters[1:9], 3,3))
         translation  = parameters[10:12]
         center       = fixed_parameters
 
         # need to convert to rot_matrix and offset
         # as defined in 
         # https://github.com/InsightSoftwareConsortium/ITK/blob/master/Modules/Core/Transform/include/itkMatrixOffsetTransformBase.hxx#L552
-        offset = center + translation - (center' * rot_matrix)'
+        offset = center + translation - rot_matrix * center
 
         return Minc2.AffineTransform(rot_matrix, offset)
     else
@@ -208,7 +217,7 @@ function save_itk_txt_transform(fn::AbstractString,
         xfm::Minc2.AffineTransform{Float64})
     # TODO: preserve fixed parameters?
     fixed_parameters = zeros(3) 
-    parameters = vcat(reshape(xfm.rot,9), xfm.shift)
+    parameters = vcat(reshape(permutedims(xfm.rot),9), xfm.shift)
     open(fn,"w") do io
         write(io,"#Insight Transform File V1.0\n")
         write(io,"#Transform 0\n")

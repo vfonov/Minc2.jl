@@ -468,7 +468,7 @@ Apply affine transform to CartesianIndices
         tfm::AffineTransform{T}, 
         p::CartesianIndex{3};
         _whatever...)::SVector{3,T} where {T}
-    tfm.rot*SVector{3,T}(p[1]-1.0, p[2]-1.0, p[3]-1.0) + tfm.shift
+    tfm.rot * SVector{3,T}(p[1]-1.0, p[2]-1.0, p[3]-1.0) + tfm.shift
 end
 
 
@@ -488,7 +488,7 @@ function decompose(rot, shift)
     dir_cos = f.U * f.Vt
 
     step  = diag(Base.inv(dir_cos) * rot)
-    start = Base.inv(dir_cos)*shift
+    start = Base.inv(dir_cos) * shift
     
     return start, step, dir_cos
 end
@@ -514,7 +514,7 @@ Decompose affine transform into three components
 start, step, direction cosines
 """
 function decompose(tfm::Matrix{T}) where {T}
-    return decompose(tfm[1:3,1:3], tfm[1:3,4])
+    return decompose( tfm[1:3, 1:3], tfm[1:3, 4])
 end
 
 

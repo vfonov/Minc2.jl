@@ -2,6 +2,8 @@ using Test, Minc2
 using StatsBase
 using LinearAlgebra
 using StaticArrays
+using DelimitedFiles
+using Tables
 
 @testset "Reading 3D volumes" begin
     for i in [
@@ -182,21 +184,68 @@ end
 end
 
 
-@testset "read and write ITK transforms" begin
+@testset "Test Transforms" begin
+    ### TODO: check that  all transformations works as expected
+
+    @testset "IdentityTransform" begin
+        xfm = Minc2.IdentityTransform()
+        @test Minc2.transform_point(xfm, SA_F64[1, 2, 3]) ≈ SA_F64[1, 2, 3]
+        @test Minc2.transform_point(Minc2.inv(xfm),SA_F64[1, 2, 3]) ≈ SA_F64[1, 2, 3]
+    end
+
+    @testset "AffineTransform" begin
+        xfm = Minc2.AffineTransform( [1.0 0 0;0 1 0;0 0 1], [1.0 1.0 1.0])
+        @test Minc2.transform_point(xfm, SA_F64[1, 2, 3]) ≈ SA_F64[2, 3, 4]
+        @test Minc2.transform_point(Minc2.inv(xfm),SA_F64[1, 2, 3]) ≈ SA_F64[0, 1, 2]
+
+        xfm = Minc2.AffineTransform( [0.0 1.0 0;1.0 0.0 0;0 0 1], [0.0 0.0 0.0])
+        @test Minc2.transform_point(xfm, SA_F64[1, 2, 3]) ≈ SA_F64[2, 1, 3]
+        @test Minc2.transform_point(Minc2.inv(xfm),SA_F64[1, 2, 3]) ≈ SA_F64[2, 1, 3]
+    end
+
+    # TODO: come up with test for nonlinear transforms
+end
+
+
+@testset "Read and Write Linear ITK transforms" begin
     mktempdir() do tmp
         # linear transform
         xfm = Minc2.read_itk_txt_transform("input/ants_linear.txt")
         @test xfm isa Minc2.AffineTransform
+
+        # check if transformation is correct:
+        # antsApplyTransformsToPoints -d 3 --precision 1 --input input/ants_points_input.csv --output input/ants_points_linear_output.csv --transform input/ants_linear.txt
+        input_points=readdlm("input/ants_points_input.csv",',',header=true)[1] # x,y,z,t,label,comment 
+        ref_output_points=readdlm("input/ants_points_linear_output.csv",',',header=true)[1] # x,y,z,t,label,comment 
+
+        # check all points
+        for i in axes(input_points,1)
+            @test Minc2.transform_point(xfm, SVector{3,Float64}(input_points[i,1:3])) ≈ SVector{3,Float64}(ref_output_points[i,1:3]) atol=1e-6
+        end
 
         Minc2.save_itk_txt_transform(joinpath(tmp,"test_ants_linear.txt"),xfm)
         xfm2 = Minc2.read_itk_txt_transform(joinpath(tmp,"test_ants_linear.txt"))
         @test xfm2 isa Minc2.AffineTransform
         @test xfm.rot ≈ xfm2.rot
         @test xfm.shift ≈ xfm2.shift
+    
+    end
+end
 
+@testset "Read and Write NonLinear ITK transforms" begin
+    mktempdir() do tmp
         # nonlinear warp
         grid_xfm = Minc2.read_itk_nifti_transform("input/ADNI_fixed_MNI-ICBM152_moving_setting_is_fastfortesting1Warp.nii.gz")
         @test grid_xfm isa Minc2.GridTransform
+
+        # antsApplyTransformsToPoints -d 3 --precision 1 --input input/ants_points_input.csv --output input/ants_points_nonlinear_output.csv --transform input/ADNI_fixed_MNI-ICBM152_moving_setting_is_fastfortesting1Warp.nii.gz
+        input_points=readdlm("input/ants_points_input.csv",',',header=true)[1] # x,y,z,t,label,comment 
+        ref_output_points=readdlm("input/ants_points_nonlinear_output.csv",',',header=true)[1] # x,y,z,t,label,comment 
+
+        for i in axes(input_points,1)
+            @test Minc2.transform_point(grid_xfm, SVector{3,Float64}(input_points[i,1:3])) ≈ SVector{3,Float64}(ref_output_points[i,1:3]) atol=1e-6
+        end
+
         Minc2.save_itk_nifti_transform(joinpath(tmp,"test_ants_warp.nii.gz"),grid_xfm)
         grid2_xfm = Minc2.read_itk_nifti_transform(joinpath(tmp,"test_ants_warp.nii.gz"))
         @test grid2_xfm isa Minc2.GridTransform
@@ -208,8 +257,7 @@ end
 end
 
 
-
-@testset "read and write minc .xfm transforms" begin
+@testset "Read and Write MINC .xfm transforms" begin
     mktempdir() do tmp
         # linear transform
         xfms = Minc2.load_transforms("input/linear.xfm")
@@ -239,32 +287,6 @@ end
         @test grid_xfms[1].vector_field  ≈  grid2_xfms[1].vector_field
     end
 end
-
-
-
-@testset "Test Transforms" begin
-    ### TODO: check that  all trasformation works as expected
-
-    @testset "IdentityTransform" begin
-        xfm = Minc2.IdentityTransform()
-        @test Minc2.transform_point(xfm, SA_F64[1, 2, 3]) ≈ SA_F64[1, 2, 3]
-        @test Minc2.transform_point(Minc2.inv(xfm),SA_F64[1, 2, 3]) ≈ SA_F64[1, 2, 3]
-    end
-
-    @testset "AffineTransform" begin
-        xfm = Minc2.AffineTransform( [1.0 0 0;0 1 0;0 0 1], [1.0 1.0 1.0])
-        @test Minc2.transform_point(xfm, SA_F64[1, 2, 3]) ≈ SA_F64[2, 3, 4]
-        @test Minc2.transform_point(Minc2.inv(xfm),SA_F64[1, 2, 3]) ≈ SA_F64[0, 1, 2]
-
-        xfm = Minc2.AffineTransform( [0.0 1.0 0;1.0 0.0 0;0 0 1], [0.0 0.0 0.0])
-        @test Minc2.transform_point(xfm, SA_F64[1, 2, 3]) ≈ SA_F64[2, 1, 3]
-        @test Minc2.transform_point(Minc2.inv(xfm),SA_F64[1, 2, 3]) ≈ SA_F64[2, 1, 3]
-    end
-
-    # TODO: come up with test for nonlinear transforms
-end
-
-
 
 @testset "Test Spatial coordinates correctness" begin
     ### TODO: check that  all trasformation works as expected
