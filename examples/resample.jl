@@ -36,6 +36,9 @@ function parse_commandline()
         "--invert"
             help = "Invert transform"
             action = :store_true
+        "--labels"
+            help = "Resample labels"
+            action = :store_true
 
     end
     parse_args(ARGS, s)
@@ -44,16 +47,6 @@ end
 args = parse_commandline()
 
 
-in_vol=Minc2.read_volume(args["in"],store=Float64)
-
-if !isnothing(args["like"])
-    out_vol = Minc2.empty_volume_like(args["like"], store=Float64)
-else
-    # out_vol = Array{Float64}(undef, size(in_vol)...)
-    # out_hdr = in_hdr
-    # out_store_hdr = in_store_hdr
-    out_vol = Minc2.empty_volume_like(in_vol)
-end
 
 if !isnothing(args["transform"])
     tfm=Minc2.load_transforms(args["transform"])
@@ -64,11 +57,38 @@ else
     tfm=nothing
 end
 
-@info "Transform:" tfm
 
-Minc2.resample_volume!(in_vol,out_vol;tfm,order=args["order"],
+if args["labels"]
+ @info "Resampling labels"
+
+ in_vol=Minc2.read_volume(args["in"],store=UInt8)
+
+ if !isnothing(args["like"])
+     out_vol = Minc2.empty_volume_like(args["like"], store=UInt8)
+ else
+     out_vol = Minc2.empty_volume_like(in_vol, store=UInt8)
+ end
+
+
+ Minc2.resample_volume!(in_vol,out_vol;tfm,order=0,
     fill=args["fill"],ftol=args["ftol"],max_iter=args["max_iter"])
 
+ Minc2.save_volume(args["out"], out_vol, store=UInt8, history=Minc2.format_history(ARGS))
 
-#Minc2.write_minc_volume_std(args["out"], UInt16, out_store_hdr, out_vol)
-Minc2.save_volume(args["out"],out_vol,store=UInt16, history=Minc2.format_history(ARGS))
+else
+
+ in_vol=Minc2.read_volume(args["in"],store=Float64)
+
+ if !isnothing(args["like"])
+     out_vol = Minc2.empty_volume_like(args["like"], store=Float64)
+ else
+     out_vol = Minc2.empty_volume_like(in_vol)
+ end
+
+
+ Minc2.resample_volume!(in_vol,out_vol;tfm,order=args["order"],
+    fill=args["fill"],ftol=args["ftol"],max_iter=args["max_iter"])
+
+ Minc2.save_volume(args["out"],out_vol,store=UInt16, history=Minc2.format_history(ARGS))
+
+end
