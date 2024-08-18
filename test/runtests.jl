@@ -5,6 +5,8 @@ using StaticArrays
 using DelimitedFiles
 using Tables
 
+
+
 @testset "Reading 3D volumes" begin
     for i in [
             "input/t1_z+_byte_cor_2.mnc",
@@ -349,5 +351,101 @@ end
         @test Minc2.transform_point(ixfm, SA_F64[-42.2117652893066,48.4688186645508,52.8470573425293])   ≈ SA_F64[-38.3819344872913, 45.9948061533514, 48.218509626188] atol=0.4
         @test Minc2.transform_point(ixfm, SA_F64[43.294116973877,48.4688186645508,52.8470573425293]) ≈ SA_F64[39.8429712902809,46.7448946781746,47.7003233054328]   atol=0.3
 
+    end
+end
+
+
+@testset "Test Jacobian calculation" begin
+    @testset "Test identity tfm to grid" begin
+        xfm = Minc2.AffineTransform( [1.0 0 0;0 1 0;0 0 1], [0.0 0.0 0.0])
+        dummy = Minc2.Volume3D(zeros(Float64, (20,20,20)), Minc2.AffineTransform( [0.0 1.0 0;1.0 0.0 0;0 0 1], [-10.0 -10.0 -10.0]))
+        grid = Minc2.tfm_to_grid(xfm, dummy)
+        @test size(Minc2.array(grid)) == (3,20,20,20)
+        @test all( Minc2.array(grid) .≈ 0.0)
+    end
+
+    @testset "Test y-shift tfm to grid" begin
+        xfm = Minc2.AffineTransform( [1.0 0 0;0 1 0;0 0 1], [0.0 1.0 0.0])
+        dummy = Minc2.Volume3D(zeros(Float64, (20,20,20)), Minc2.AffineTransform( [0.0 1.0 0;1.0 0.0 0;0 0 1], [-10.0 -10.0 -10.0]))
+        grid = Minc2.tfm_to_grid(xfm, dummy)
+        @test size(Minc2.array(grid)) == (3,20,20,20)
+
+        @test all( Minc2.array(grid)[1,:,:,:] .≈ 0.0)
+        @test all( Minc2.array(grid)[2,:,:,:] .≈ 1.0)
+        @test all( Minc2.array(grid)[3,:,:,:] .≈ 0.0)
+    end
+
+    @testset "Test x-shift tfm to grid" begin
+        xfm = Minc2.AffineTransform( [1.0 0 0;0 1 0;0 0 1], [1.0 0.0 0.0])
+        dummy = Minc2.Volume3D(zeros(Float64, (20,20,20)), Minc2.AffineTransform( [0.0 1.0 0;1.0 0.0 0;0 0 1], [-10.0 -10.0 -10.0]))
+        grid = Minc2.tfm_to_grid(xfm, dummy)
+        @test size(Minc2.array(grid)) == (3,20,20,20)
+
+        @test all( Minc2.array(grid)[1,:,:,:] .≈ 1.0)
+        @test all( Minc2.array(grid)[2,:,:,:] .≈ 0.0)
+        @test all( Minc2.array(grid)[3,:,:,:] .≈ 0.0)
+    end
+
+    @testset "Test z-shift tfm to grid" begin
+        xfm = Minc2.AffineTransform( [1.0 0 0;0 1 0;0 0 1], [0.0 0.0 1.0])
+        dummy = Minc2.Volume3D(zeros(Float64, (20,20,20)), Minc2.AffineTransform( [0.0 1.0 0;1.0 0.0 0;0 0 1], [-10.0 -10.0 -10.0]))
+        grid = Minc2.tfm_to_grid(xfm, dummy)
+        @test size(Minc2.array(grid)) == (3,20,20,20)
+
+        @test all( Minc2.array(grid)[1,:,:,:] .≈ 0.0)
+        @test all( Minc2.array(grid)[2,:,:,:] .≈ 0.0)
+        @test all( Minc2.array(grid)[3,:,:,:] .≈ 1.0)
+    end
+
+
+    @testset "Identity transform, unit jacobian" begin
+        # identity transform
+        xfm = Minc2.AffineTransform( [1.0 0 0;0 1 0;0 0 1], [0.0 0.0 0.0])
+        # volume centered at origin
+        jac = Minc2.Volume3D(zeros(Float64, (20,20,20)), Minc2.AffineTransform( [1.0 0.0 0;0.0 1.0 0;0 0 1], [-10.0 -10.0 -10.0]))
+
+        Minc2.calculate_jacobian!(xfm, jac)
+        @test mean(Minc2.array(jac)) ≈ 1.0 atol=1e-6
+    end
+
+    @testset "Uniform scaling jacobian" begin
+        # identity transform
+        xfm = Minc2.AffineTransform( [0.95 0 0;0 0.95 0;0 0 0.95], [0.0 0.0 0.0])
+
+        # volume centered at origin
+        jac = Minc2.Volume3D(zeros(Float64, (20,20,20)), Minc2.AffineTransform( [1.0 0.0 0;0.0 1.0 0;0 0 1], [-10.0 -10.0 -10.0]))
+        Minc2.calculate_jacobian!(xfm, jac)
+        @test mean(Minc2.array(jac)) ≈ det(xfm.rot) atol=1e-6
+    end
+
+
+    @testset "Z-scaling jacobian" begin
+        # identity transform
+        xfm = Minc2.AffineTransform( [1.0 0 0;0 1.0 0;0 0 0.9], [0.0 0.0 0.0])
+        # volume centered at origin
+        jac = Minc2.Volume3D(zeros(Float64, (20,20,20)), Minc2.AffineTransform( [1.0 0.0 0;0.0 1.0 0;0 0 1], [-10.0 -10.0 -10.0]))
+        Minc2.calculate_jacobian!(xfm, jac)
+        @test mean(Minc2.array(jac)) ≈ det(xfm.rot) atol=1e-6
+    end
+
+    @testset "X-scaling jacobian" begin
+        # identity transform
+        xfm = Minc2.AffineTransform( [0.9 0 0;0 1.0 0;0 0 1.0], [0.0 0.0 0.0])
+        Minc2.save_transforms("test_scale_x.xfm",[xfm])
+
+        # volume centered at origin
+        jac = Minc2.Volume3D(zeros(Float64, (20,20,20)), Minc2.AffineTransform( [1.0 0.0 0;0.0 1.0 0;0 0 1], [-10.0 -10.0 -10.0]))
+
+        Minc2.calculate_jacobian!(xfm, jac)
+        @test mean(Minc2.array(jac)) ≈ det(xfm.rot) atol=1e-6
+    end
+
+    @testset "Pure rotation transform, unit jacobian" begin
+        xfm = Minc2.load_transforms("r30.xfm")[1]
+        # volume centered at origin
+        jac = Minc2.Volume3D(zeros(Float64, (20,25,30)), Minc2.AffineTransform( [1.0 0.0 0;0.0 1.0 0;0 0 1], [-10.0 -12.5 -15.0]))
+
+        Minc2.calculate_jacobian!(xfm, jac)
+        @test mean(Minc2.array(jac)) ≈ det(xfm.rot) atol=1e-6
     end
 end

@@ -374,13 +374,15 @@ function tfm_to_grid!(
         tfm::Union{Vector{XFM}, XFM}, 
         grid::AbstractArray{T,4},
         v2w::AffineTransform{C};
-        ftol=1.0/80,max_iter=10)::AbstractArray{T,4} where {T, C, XFM<:AnyTransform}
+        ftol=1.0/80,
+        max_iter=10)::AbstractArray{T,4} where {T, C, XFM<:AnyTransform}
     
     @simd for c in CartesianIndices(size(grid)[2:end])
         orig = transform_point(v2w, c )
         dst  = transform_point(tfm, orig;max_iter,ftol)
-        @inbounds grid[:,c] .= dst .- orig
+        grid[:,c] .= dst .- orig
     end
+
     return grid
 end
 
@@ -460,7 +462,14 @@ function normalize_tfm(tfm::Union{Vector{XFM}, XFM},
         ref::G;
         store::Type{T}=Float64,ftol=1.0/80,max_iter=10)::GridTransform{Float64,T} where {T, XFM<:AnyTransform, G<:Volume3D}
 
-    out_grid = similar(ref.vol, store)
+    if ndims(ref.vol)==3
+        # need to generate 4D output
+        out_grid = Array{T,4}(undef,(3,size(ref.vol)...))
+    else
+        out_grid = similar(ref.vol, store)
+    end
+
+
     v2w = voxel_to_world(ref)
 
     tfm_to_grid!(tfm, out_grid, v2w;ftol,max_iter)
@@ -708,25 +717,24 @@ function calculate_jacobian!(
     # calculate scaling matrix from the voxel to world matrix
     # to compensate for the step size (makes no difference on 1x1x1 voxels)
     _,step,_ = decompose(out_v2w)
-    sc = diagm(Base.inv.(step)) 
+    sc = diagm(Base.inv.(step))
 
     # First step: generate vector field of transformations
     vector_field = Array{T}(undef, 3, size(out_vol)...)
-    @inbounds let 
-        @simd for c in CartesianIndices(out_vol)
-            orig = transform_point(out_v2w, c )
-            dst  = transform_point(tfm, orig; ftol, max_iter )
 
-            vector_field[:,c] .= dst # .- orig # mincblob convention (?)
-        end
+    @simd for c in CartesianIndices(size(vector_field)[2:end])
+        orig = Minc2.transform_point(out_v2w, c )
+        dst  = Minc2.transform_point(tfm, orig;max_iter,ftol)
+        vector_field[:,c] .= dst #.- orig
     end
+
     # Second step: calculate jacobian determinant 
     vector_field_itp = extrapolate( interpolate( vector_field, 
         (NoInterp(),interp,interp,interp)), Flat())
 
     @simd for c in CartesianIndices(out_vol)
-        grad = hcat([ Interpolations.gradient( vector_field_itp, i, Tuple(c)...) for i in 1:3 ]...)
-        @inbounds out_vol[c] = det(grad'*sc)
+        J = hcat([ Interpolations.gradient( vector_field_itp, i, Tuple(c)...) for i in 1:3 ]...)
+        out_vol[c] = det( J * sc )
     end
 
     return out_vol
@@ -757,7 +765,7 @@ function calculate_jacobian!(
         ftol=1.0/80,
         max_iter=10)::Volume3D{T,3} where {T,I,XFM<:AnyTransform}
 
-    calculate_jacobian!(tfm, out_vol.vol,out_vol.v2w;interp,ftol,max_iter) 
+    calculate_jacobian!(tfm, out_vol.vol, out_vol.v2w; interp,ftol,max_iter) 
     return out_vol
 end
 
