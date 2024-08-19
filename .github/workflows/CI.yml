@@ -19,24 +19,20 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.8'
-          - '1.9'
-          - '1.10'
-#          - 'nightly' # CBindings is failing on nightly
+          - 'lts'
+          - '1'
+          - 'pre'
+#         - 'nightly' # CBindings is failing on nightly
         os:
           - ubuntu-latest
         arch:
           - x64
     steps:
-      - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@v1
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      # - run: |
-      #     julia --project -e '
-      #       using Pkg
-      #       Pkg.add(url="https://github.com/vfonov/LIBMINC_jll.jl.git",rev="main")'
-      - uses: julia-actions/cache@v1
+      - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
