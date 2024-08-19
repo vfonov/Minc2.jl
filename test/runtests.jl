@@ -441,7 +441,12 @@ end
     end
 
     @testset "Pure rotation transform, unit jacobian" begin
-        xfm = Minc2.load_transforms("r30.xfm")[1]
+        #xfm = Minc2.load_transforms("r30.xfm")[1]
+        xfm = Minc2.AffineTransform( [
+         1 0 0;
+         0 0.866025388240814 -0.5;
+         0 0.5 0.866025388240814;
+        ], [0.0 0.0 0.0])
         # volume centered at origin
         jac = Minc2.Volume3D(zeros(Float64, (20,25,30)), Minc2.AffineTransform( [1.0 0.0 0;0.0 1.0 0;0 0 1], [-10.0 -12.5 -15.0]))
 
