@@ -5,7 +5,88 @@ using StaticArrays
 using DelimitedFiles
 using Tables
 
+@testset "Low level io" begin
+    @testset "Try open missing file" begin
+        @test_throws Minc2.Minc2Error Minc2.open_minc_file("input/missing.mnc")
+    end
 
+    @testset "Testing coronal byte" begin
+        h=Minc2.open_minc_file("input/t1_z+_byte_cor.mnc")
+
+        @test Minc2.store_type(h) == Type{Int8}
+        @test Minc2.representation_type(h) == Type{Float32}
+        @test Minc2.ndim(h) == 3
+
+        sh = Minc2.store_header(h)
+
+        @test sh.dims == [30, 10, 40]
+        @test sh.start == [-18.000000000000018, -9.999999999999998, 59.999999999999986]
+        @test sh.step == [1.0,1.2,1.0]
+        @test isapprox(sh.dir_cos, [ 0.998021 0.052304 -0.034899; 0.03576 -0.015602 0.999239;-0.05172 0.998509 0.017442],rtol=1e-6)
+        @test sh.axis == [Minc2.DIM_X, Minc2.DIM_Z, Minc2.DIM_Y]
+
+        # instruct minc that we want to read in "standard" order
+        Minc2.setup_standard_order( h )
+        rh = Minc2.representation_header(h)
+
+        @test rh.dims == [30, 40, 10]
+        @test rh.start == [-18.000000000000018, 59.999999999999986, -9.999999999999998]
+        @test rh.step == [1.0,1.0,1.2 ]
+        @test isapprox(rh.dir_cos, [ 0.998021 0.052304 -0.034899; -0.05172 0.998509 0.017442; 0.03576 -0.015602 0.999239],rtol=1e-6)
+        @test rh.axis == [Minc2.DIM_X, Minc2.DIM_Y, Minc2.DIM_Z]
+
+        Minc2.close_minc_file(h)
+    end
+
+    @testset "Testing sagittal long" begin
+        h = Minc2.open_minc_file("input/t1_z-_long_sag.mnc")
+        
+        @test Minc2.store_type(h) == Type{Int32}
+        @test Minc2.representation_type(h) == Type{Float32}
+        @test Minc2.ndim(h) == 3
+
+        sh = Minc2.store_header(h)
+
+        @test sh.dims == [40, 10, 30]
+        @test sh.start == [59.999999999999986, 0.8000000000000007, -18.000000000000018]
+        @test sh.step == [1.0,-1.2,1.0]
+        @test isapprox(sh.dir_cos, [-0.05172 0.998509 0.017442; 0.03576 -0.015602 0.999239;0.998021 0.052304 -0.034899],rtol=1e-6)
+        @test sh.axis == [Minc2.DIM_Y, Minc2.DIM_Z, Minc2.DIM_X]
+
+        # instruct minc that we want to read in "standard" order, should be same as before
+        Minc2.setup_standard_order( h )
+        rh = Minc2.representation_header(h)
+
+        @test rh.dims == [30, 40, 10]
+        @test rh.start == [-18.000000000000018, 59.999999999999986, -9.999999999999998]
+        @test rh.step == [1.0,1.0,1.2 ]
+        @test isapprox(rh.dir_cos, [ 0.998021 0.052304 -0.034899; -0.05172 0.998509 0.017442; 0.03576 -0.015602 0.999239],rtol=1e-6)
+        @test rh.axis == [Minc2.DIM_X, Minc2.DIM_Y, Minc2.DIM_Z]
+
+        Minc2.close_minc_file(h)
+    end
+
+    @testset "Testing volume types, Char" begin
+        h = Minc2.open_minc_file("input/3DCharImage.mnc")
+        @test Minc2.store_type(h) == Type{Int8}
+        @test Minc2.representation_type(h) == Type{Int8}
+        Minc2.close_minc_file(h)
+    end
+
+    @testset "Testing volume types, UShort" begin
+        h = Minc2.open_minc_file("input/3DUShortImage.mnc")
+        @test Minc2.store_type(h) == Type{UInt16}
+        @test Minc2.representation_type(h) == Type{UInt16}
+        Minc2.close_minc_file(h)
+    end
+
+    @testset "Testing volume types, Int" begin
+        h = Minc2.open_minc_file("input/3DIntImage.mnc")
+        @test Minc2.store_type(h) == Type{Int32}
+        @test Minc2.representation_type(h) == Type{Int32}
+        Minc2.close_minc_file(h)
+    end
+end
 
 @testset "Reading 3D volumes" begin
     for i in [

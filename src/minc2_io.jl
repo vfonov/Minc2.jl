@@ -211,6 +211,29 @@ function ndim(h::VolumeHandle)::Int
 end
 
 """
+    store_type(h::VolumeHandle)::Type
+
+Query storage data type of the minc file, WARNING: it doesn't nacessery mean that it's the same as representation type
+"""
+function store_type(h::VolumeHandle)::Type
+    minc_dtype = Ref{Int}(0)
+    @minc2_check minc2_simple.minc2_storage_data_type( h.x[], minc_dtype )
+    return minc2_to_julia[minc_dtype[]]
+end
+
+"""
+    store_type(h::VolumeHandle)::Type
+
+Query representation data type of the minc file, WARNING: it doesn't nacessery mean that it's the same as store_type type
+"""
+function representation_type(h::VolumeHandle)::Type
+    minc_dtype = Ref{Int}(0)
+    @minc2_check minc2_simple.minc2_data_type( h.x[], minc_dtype )
+    return minc2_to_julia[minc_dtype[]]
+end
+
+
+"""
     setup_standard_order(h::VolumeHandle)
 
 Prepare to read volume in standard order: [V,X,Y,Z,TIME]
