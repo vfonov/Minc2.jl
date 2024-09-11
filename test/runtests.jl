@@ -173,6 +173,11 @@ end
     end
 end
 
+@testset "Testing reading wrong voxel type" begin
+    vol,hdr,store_hdr = Minc2.read_minc_volume_std("input/t1_z-_long_sag.mnc",Int16)
+    @test eltype(vol) == Int16
+end
+
 @testset "Reading 4D volume, raw" begin
     vol,hdr = Minc2.read_minc_volume_raw("input/dti_sample.mnc",Float64)
 
