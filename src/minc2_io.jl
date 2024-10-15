@@ -318,24 +318,24 @@ function empty_like_minc_volume_raw( h::VolumeHandle,
 end
 
 
+
 """
-    Internal function that makes sure types are compatible
+    Internal function that makes shure types are compatible
 """
 function minc2_load_and_convert_complete_volume(
-    h::VolumeHandle, volume::Array{Tin}, dtype::Type{Tout}) where {Tin<:Number,Tout<:Number}
+    h::VolumeHandle, volume::Array{T}, dtype::Type{T}) where {T}
 
     @minc2_check minc2_simple.minc2_load_complete_volume(h.x[], 
-        Base.unsafe_convert(Ptr{Cvoid},volume), julia_to_minc2[Type{Tin}] )
+        Base.unsafe_convert(Ptr{Cvoid},volume), julia_to_minc2[Type{T}] )
 
-    return convert.(Tout,volume)
+    return volume
 end
-
 
 """
     Internal function that makes sure types are compatible
 """
 function minc2_load_and_convert_complete_volume(
-    h::VolumeHandle, volume::Array{Tin}, dtype::Type{Tout}) where {Tin<:Real,Tout<:Integer}
+    h::VolumeHandle, volume::Array{Tin}, dtype::Type{Tout}) where {Tin<:AbstractFloat,Tout<:Integer}
 
     @warn "Truncating volume data to integer type " Tin Tout
 
@@ -344,6 +344,21 @@ function minc2_load_and_convert_complete_volume(
 
     return trunc.(Tout,volume)
 end
+
+
+"""
+    Internal function that makes shure types are compatible
+"""
+function minc2_load_and_convert_complete_volume(
+    h::VolumeHandle, volume::Array{Tin}, dtype::Type{Tout}) where {Tin<:Number,Tout<:Number}
+    # make sure that types are compatible
+    @minc2_check minc2_simple.minc2_load_complete_volume(h.x[], 
+        Base.unsafe_convert(Ptr{Cvoid},volume), julia_to_minc2[Type{Tin}] )
+
+    return convert.(Tout,volume)
+end
+
+
 
 
 
