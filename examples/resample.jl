@@ -49,7 +49,13 @@ args = parse_commandline()
 
 
 if !isnothing(args["transform"])
-    tfm=Minc2.load_transforms(args["transform"])
+    
+    if endswith(args["transform"],".xfm")
+        tfm=Minc2.load_transforms(args["transform"])
+    else # assume that it's a grid
+        tfm=Minc2.GridTransform(Minc2.read_volume(args["transform"],store=Float64))
+    end
+
     if args["invert"]
         tfm=Minc2.inv(tfm)
     end

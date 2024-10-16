@@ -717,27 +717,27 @@ function calculate_jacobian!(
     # calculate scaling matrix from the voxel to world matrix
     # to compensate for the step size (makes no difference on 1x1x1 voxels)
     _,step,_ = decompose(out_v2w)
-    sc = det(diagm(Base.inv.(step)))
+    sc = prod(Base.inv.(step))
 
     # First step: generate vector field of transformations
     vector_field = Array{T}(undef, 3, size(out_vol)...)
 
-    @inbounds @simd  for c in CartesianIndices(size(vector_field)[2:end])
+    @inbounds for c in CartesianIndices(size(vector_field)[2:end])
         orig = Minc2.transform_point(out_v2w, c )
         dst  = Minc2.transform_point(tfm, orig; max_iter,ftol)
-        vector_field[:,c] .= dst #.- orig
+        vector_field[:,c] .= dst 
     end
 
     # Second step: calculate jacobian determinant 
     vector_field_itp = extrapolate( interpolate( vector_field, 
         (NoInterp(),interp,interp,interp)), Flat())
 
-    J=MMatrix{3,3,T}(undef)
 
-    @inbounds @simd for c in CartesianIndices(out_vol)
-        for i in 1:3
-            J[:,i].=Interpolations.gradient( vector_field_itp, i, Tuple(c)...)
-        end
+    @inbounds for c in CartesianIndices(out_vol)
+        J = mapreduce(hcat, 1:3) do i
+            gradient(vector_field_itp, i, Tuple(c)...)
+        end :: SMatrix{3, 3, T, 9}
+
         out_vol[c] = det( J ) * sc 
     end
 
