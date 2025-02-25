@@ -10,6 +10,14 @@ using Tables
         @test_throws Minc2.Minc2Error Minc2.open_minc_file("input/missing.mnc")
     end
 
+    @testset "Reading attributes" begin
+        h=Minc2.open_minc_file("input/t1_z+_byte_cor.mnc")
+        @test length(Minc2.read_attribute(h,"","history")) == 776 
+        @test length(Minc2.read_attribute(h,"","ident")) == 43
+        ### TODO: add tests for more attributes
+        Minc2.close_minc_file(h)
+    end
+
     @testset "Testing coronal byte" begin
         h=Minc2.open_minc_file("input/t1_z+_byte_cor.mnc")
 

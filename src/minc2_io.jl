@@ -654,8 +654,16 @@ also convert Array into the first value if it's a one-length array
 """
 function get_attribute(h::VolumeHandle,g::String,a::String; default=missing)
     # ::Union{String,Missing,...}
-    r=default
-    if g in groups(h)
+    r = default
+    if g=="" # special case, attributes does not work on this group
+        try
+            r = read_attribute(h,g,a)
+        catch err
+            if !isa(err,Minc2Error)
+                rethrow(err)
+            end
+        end
+    elseif  g in groups(h)  # handle special case of empty group
         if a in attributes(h,g)
             r=read_attribute(h,g,a)
         end
