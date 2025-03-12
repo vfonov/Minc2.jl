@@ -1,7 +1,7 @@
 name = "Minc2"
 uuid = "8e6f2f06-34e2-40fe-8437-e396464d2a7f"
 authors = ["Vladimir S. FONOV <vladimir.fonov@gmail.com>"]
-version = "0.1.7"
+version = "0.1.8"
 
 [deps]
 CBinding = "d43a6710-96b8-4a2d-833c-c424785e5374"
