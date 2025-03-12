@@ -12,9 +12,14 @@ using Tables
 
     @testset "Reading attributes" begin
         h=Minc2.open_minc_file("input/t1_z+_byte_cor.mnc")
-        @test length(Minc2.read_attribute(h,"","history")) == 777
-        @test length(Minc2.read_attribute(h,"","ident")) == 45
-        ### TODO: add tests for more attributes
+        @test Minc2.read_attribute(h,"","history") == String(read("input/t1_z+_byte_cor.history.txt"))
+        @test Minc2.read_attribute(h,"","ident") == String(read("input/t1_z+_byte_cor.ident.txt"))
+        Minc2.close_minc_file(h)
+    end
+
+    @testset "Reading attributes 2" begin
+        h=Minc2.open_minc_file("input/3DDoubleImage_double_byte.mnc")
+        @test Minc2.read_attribute(h,"acquisition","StdString") == "Test std::string\0"
         Minc2.close_minc_file(h)
     end
 

@@ -596,7 +596,7 @@ function read_attribute(h::VolumeHandle,
     # TODO: make sure it's a good assumption
     if attr_type[] == minc2_simple.MINC2_STRING 
         # remove trailing 0?
-        _buf = Vector{UInt8}(undef,attr_length[]+1) 
+        _buf = Vector{UInt8}(undef,attr_length[]) 
         @minc2_check minc2_simple.minc2_read_attribute(h.x[], group, attribute, _buf, attr_length[])
         return String(_buf)
     elseif attr_type[] == minc2_simple.MINC2_FLOAT
