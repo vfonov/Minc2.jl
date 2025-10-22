@@ -41,14 +41,16 @@ function parse_commandline()
 end
 
 args = parse_commandline()
-
+@info "Calculating Jacobian determinant for transform $(args["transform"]) with reference $(args["ref"])"
 jac = Minc2.empty_volume_like(args["ref"], store=Float64)
 
+@info "loading transform"
 tfm=Minc2.load_transforms(args["transform"])
 if args["invert"]
     tfm=Minc2.inv(tfm)
 end
 
+@info "Setting up interpolation"
 if args["order"]==1
     interp=BSpline(Linear())
 elseif args["order"]==2  # default
@@ -59,5 +61,9 @@ else
     @error "Unsupported order" args["order"]
 end
 
+@info "Calclating jacobian determinant"
 Minc2.calculate_jacobian!(tfm, jac;ftol=args["ftol"],max_iter=args["max_iter"],interp=interp)
+
+@info "Saving volume to $(args["out"])"
 Minc2.save_volume(args["out"],jac, store=UInt16, history=Minc2.format_history(ARGS))
+@info "Done"
