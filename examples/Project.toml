@@ -1,6 +1,9 @@
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
+CBinding = "d43a6710-96b8-4a2d-833c-c424785e5374"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
+ImageFiltering = "6a3955dd-da59-5b1f-98d4-e7296123deb5"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 Minc2 = "8e6f2f06-34e2-40fe-8437-e396464d2a7f"
+libminc_jll = "dce2f2bf-0ed4-5a0e-8af7-a90b827a9344"
