@@ -735,7 +735,7 @@ function calculate_jacobian!(
 
     @inbounds for c in CartesianIndices(out_vol)
         J = mapreduce(hcat, 1:3) do i
-            gradient(vector_field_itp, i, Tuple(c)...)
+            Interpolations.gradient(vector_field_itp, i, Tuple(c)...)
         end :: SMatrix{3, 3, T, 9}
 
         out_vol[c] = det( J ) * sc 
