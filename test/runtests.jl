@@ -1,4 +1,5 @@
-using Test, Minc2
+using Test
+using Minc2
 using StatsBase
 using LinearAlgebra
 using StaticArrays
@@ -241,8 +242,7 @@ end
 
 @testset "Writing 3D volume in Float64" begin
     mktempdir() do tmp
-        in_vol,in_hdr,in_stor_hdr=Minc2.read_minc_volume_std("input/t1_z+_double_cor.mnc", Float64)
-
+        in_vol,in_hdr,in_stor_hdr = Minc2.read_minc_volume_std("input/t1_z+_double_cor.mnc", Float64)
         Minc2.write_minc_volume_std(joinpath(tmp,"test1.mnc"), Float64, in_stor_hdr, in_vol)
 
         out_vol,out_hdr,out_stor_hdr = Minc2.read_minc_volume_std(joinpath(tmp,"test1.mnc"), Float64)

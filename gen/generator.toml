@@ -1,0 +1,44 @@
+[library]
+name = "LibMinc2Simple"
+output_base = "../src/LibMinc2Simple"
+prologue_file_path = ""
+
+[codegen]
+use_julia_native_enum = true
+use_ccall_macro = false
+markdown_output = "index.md"
+
+# How to handle opaque pointers (void*)
+# "cvoid" maps to `Ptr{Cvoid}`, which is standard.opaque_func_arg_as_ptr = true
+opaque_func_arg_as_ptr = true
+
+# If true, C enums are mapped to Julia @enum. 
+# If false, they are mapped to Cint constants (which is often easier for bitwise flags).
+use_deterministic_symbol = true
+
+
+[general]
+# The name of the module to generate
+module_name = "LibMinc"
+
+# The name of the JLL package that provides the shared library
+jll_pkg_name = "libminc_jll"
+
+# The specific library constant to export from the JLL. 
+library_name = "libminc2_simple" 
+
+# Output file for the generated code
+output_file_path = "../src/LibMinc.jl"
+
+# Common prefixes to export automatically
+# This prevents polluting the namespace with internal C symbols
+export_symbol_prefixes = ["minc2_", "MINC2_", "miget_", "miset_"]
+
+# Optional: Generate strictly typed functions (default is false, which uses Any for some pointers)
+# true is generally better for performance/safety but requires cleaner headers.
+is_function_strictly_typed = true
+
+
+# Optional: Map C booleans to Julia Bool
+use_julia_bool = true
+

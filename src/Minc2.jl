@@ -10,10 +10,14 @@ module Minc2
 using LinearAlgebra
 using Requires
 
+using libminc_jll
+
+# clang.jl generated bindings
+include("LibMinc.jl")
+using .LibMinc
+
 # geometric transformation functions
 include("geo_transform.jl")
-# low level C-library interfaces to libminc
-include("minc2_simple.jl")
 # low level functions for interfacing with minc files
 include("minc2_io.jl")
 # low level functions for interfacing with .xfm files
@@ -40,6 +44,6 @@ end
 
 
 # Try to precompile things
-include("precompile.jl")
+#include("precompile.jl")
 
 end # module
