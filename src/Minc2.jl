@@ -12,7 +12,7 @@ using Requires
 
 using libminc_jll
 
-# generated bindings
+# clang.jl generated bindings
 include("LibMinc.jl")
 using .LibMinc
 

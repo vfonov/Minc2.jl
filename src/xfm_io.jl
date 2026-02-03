@@ -1,18 +1,4 @@
 """
-   @enum XFM
-
-Low level: transformation types stored in .xfm file
-"""
-@cenum XFM::UInt32 begin
-    MINC2_XFM_LINEAR                 = Cint(MINC2_XFM_LINEAR)
-    MINC2_XFM_THIN_PLATE_SPLINE      = Cint(MINC2_XFM_THIN_PLATE_SPLINE)
-    MINC2_XFM_USER_TRANSFORM         = Cint(MINC2_XFM_USER_TRANSFORM)
-    MINC2_XFM_CONCATENATED_TRANSFORM = Cint(MINC2_XFM_CONCATENATED_TRANSFORM)
-    MINC2_XFM_GRID_TRANSFORM         = Cint(MINC2_XFM_GRID_TRANSFORM)
-end
-
-
-"""
 Low level: minc2_simple XFM transform handle
 """
 mutable struct TransformHandle
@@ -98,10 +84,10 @@ end
 
 Low level: Get transform type  for `n`th transform in open handle
 """
-function get_n_type(h::TransformHandle; n::Int64=0)::XFM
+function get_n_type(h::TransformHandle; n::Int64=0)::minc2_xfm
     t = Ref{Cint}(0)
     @minc2_check minc2_xfm_get_n_type( h.x, n, t )
-    return XFM(t[])
+    return minc2_xfm(t[])
 end
 
 """
