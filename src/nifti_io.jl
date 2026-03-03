@@ -43,7 +43,7 @@ function read_nifti_volume(fn::AbstractString; store::Type{T}=Float64)::Volume3D
     # and https://github.com/InsightSoftwareConsortium/ITK/blob/5.4/Modules/IO/NIFTI/src/itkNiftiImageIO.cxx#L2182
     # and https://github.com/InsightSoftwareConsortium/ITK/blob/5.4/Modules/IO/NIFTI/src/itkNiftiImageIO.cxx#L2196
     #     https://github.com/InsightSoftwareConsortium/ITK/blob/5.4/Modules/IO/NIFTI/src/itkNiftiImageIO.cxx#L2211
-
+    
     # invert x,y,z directions
     tfm[1:3,1:2] .= tfm[1:3,1:2] .* -1.0
     # invert x,y origin 
@@ -73,22 +73,24 @@ function save_nifti_volume(fn::AbstractString, vol::Volume3D{T};
         _history = vol.history * "\n" * history
     end
 
-    tfm = [vol.v2w.rot vol.v2w.shift; 0 0 0 1]
+    tfm = Matrix{Float32}([vol.v2w.rot vol.v2w.shift])
     # flip 
     tfm[1:3,1:2] .= tfm[1:3,1:2] .* -1.0
     tfm[1:2,4]   .= tfm[1:2,4]   .* -1.0
 
     start, step, dir_cos = decompose(tfm)
-    R_quat = Rotations.params(QuatRotation(dir_cos))
 
     ni=NIVolume( convert(AbstractArray{S}, vol.vol),
-        qfac = 1.0f0,
-        quatern_b=R_quat[2],quatern_c=R_quat[3],quatern_d=R_quat[4],
-        qoffset_x= start[1], qoffset_y=start[2], qoffset_z=start[3],
+        #qfac = 1.0f0,
+        # quatern_b=R_quat[2],quatern_c=R_quat[3],quatern_d=R_quat[4],
+        # qoffset_x= start[1], qoffset_y=start[2], qoffset_z=start[3],
+        orientation = tfm,
         voxel_size = Tuple(Float32(i) for i in step),
         xyzt_units = Int8(2),
         regular = Int8('r'),
         intent_code = Int16(intent_code),)
+
+    #setaffine(ni.header, tfm)
     
     #setaffine(ni.header, [vol.v2w.rot vol.v2w.shift;0 0 0 1])
     # TODO: deal with vectors (?)
