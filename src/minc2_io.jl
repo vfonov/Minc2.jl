@@ -82,6 +82,7 @@ mutable struct MincHeader
     dir_cos::Matrix{Float64}
     dir_cos_valid::Vector{Bool}
     axis::Vector{DIM}
+    irregular::Vector{Bool}
 
     function MincHeader(ndim::Integer)
         new(
@@ -89,8 +90,9 @@ mutable struct MincHeader
             zeros(Float64, ndim),
             ones(Float64, ndim),
             Matrix{Float64}(undef, ndim, 3),
-            zeros(Bool, ndim),
+            falses(ndim),
             fill(DIM_UNKNOWN, ndim),
+            falses(ndim),
         )
     end
 end
@@ -115,7 +117,7 @@ function define_minc_file(hdr::MincHeader,
         dims_vec[i] = minc2_dimension(
             hdr.axis[i],
             len,
-            0,
+            hdr.irregular[i] ? 1 : 0,
             hdr.step[i],
             hdr.start[i],
             hdr.dir_cos_valid[i] ? 1 : 0,
@@ -185,6 +187,8 @@ function _hdr_convert!(hdr::MincHeader, dd::Ref{Ptr{minc2_dimension}})::MincHead
         hdr.dims[i]   = d.length
         hdr.start[i]  = d.start
         hdr.step[i]   = d.step
+        hdr.irregular[i] = d.irregular != 0
+
         if d.have_dir_cos != 0
             hdr.dir_cos[i, :] .= (d.dir_cos[1], d.dir_cos[2], d.dir_cos[3])
             hdr.dir_cos_valid[i] = true
@@ -274,6 +278,17 @@ function read_minc_volume_std(h::VolumeHandle,
     return minc2_load_and_convert_complete_volume(h, volume, dtype), hdr, store_hdr
 end
 
+function read_minc_volume_std_4D(h::VolumeHandle,
+                              dtype::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader,Vector{Float64},Vector{Float64}} where T<:Number
+    fdtype = representation_type(h)
+    volume, hdr, store_hdr = empty_like_minc_volume_std(h, fdtype.parameters[1])
+    vol = minc2_load_and_convert_complete_volume(h, volume, dtype)
+    time_coord = read_variable(h, "dimensions", "time")
+    time_widths = read_variable(h, "info", "time-width")
+
+    return vol, hdr, store_hdr, time_coord, time_widths
+end
+
 # Path-based helpers (open/close internally)
 
 function empty_like_minc_volume_std(path::String,
@@ -304,6 +319,7 @@ function read_minc_volume_std(path::String,
     return volume, hdr, store_hdr
 end
 
+
 function read_minc_volume_std_history(path::String,
                                       ::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader,Union{String,Nothing}} where T<:Number
     handle = open_minc_file(path)
@@ -312,6 +328,26 @@ function read_minc_volume_std_history(path::String,
     close_minc_file(handle)
     finalize(handle)
     return volume, hdr, store_hdr, history
+end
+
+
+function read_minc_volume_std_history_4D(path::String,
+        ::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader,Vector{Float64},Vector{Float64},Union{String,Nothing}} where T<:Number
+    handle = open_minc_file(path)
+    volume, hdr, store_hdr, time_coords, time_widths = read_minc_volume_std_4D(handle, T)
+    history = read_history(handle)
+    close_minc_file(handle)
+    finalize(handle)
+    return volume, hdr, store_hdr, time_coords, time_widths, history
+end
+
+function read_minc_volume_std_4D(path::String,
+        ::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader,Vector{Float64},Vector{Float64}} where T<:Number
+    handle = open_minc_file(path)
+    volume, hdr, store_hdr, time_coords, time_widths = read_minc_volume_std_4D(handle, T)
+    close_minc_file(handle)
+    finalize(handle)
+    return volume, hdr, store_hdr, time_coords, time_widths
 end
 
 function empty_like_minc_volume_raw(path::String,
@@ -362,60 +398,69 @@ function copy_minc_metadata(i::VolumeHandle, o::VolumeHandle)
 end
 
 # arbitrary variables reading and writing
-
-function read_variable(h::VolumeHandle, name::String) ::Union{AbstractVector,Nothing}
+function read_variable(h::VolumeHandle, path::String, name::String) ::Union{AbstractVector,Nothing}
     var_type   = Ref{Cint}(0)
-    var_length = Ref{Cint}(0)
+    ndims      = Ref{Cint}(0)
 
-    @minc2_check minc2_get_variable_type(h.x, name, var_type)
-    @minc2_check minc2_get_variable_length(h.x, name, var_length)
+    @minc2_check Minc2.minc2_get_variable_ndims(h.x, path, name, ndims)
+
+    dims = Vector{Cint}(undef, ndims[])
+    @minc2_check Minc2.minc2_get_variable_dims(h.x, path, name, dims)
+
+    var_type = Ref{Cint}(0)
+    @minc2_check Minc2.minc2_get_variable_type(h.x, path, name, var_type)
 
     # @minc2_check minc2_read_variable(
     #     h.x, name, Base.unsafe_convert(Ptr{Cvoid}, data), length(data), julia_to_minc2[Type{T}])
     # return nothing
+    start = zeros(Cint, ndims[])
+
     if var_type[] == MINC2_FLOAT
-        buf = Vector{Float32}(undef, var_length[])
-        @minc2_check minc2_read_variable(h.x, name, buf, var_length[], julia_to_minc2[Type{Float32}])
+        buf = Array{Float32}(undef, (dims...))
+        @minc2_check minc2_read_variable_raw(h.x, path, name, julia_to_minc2[Type{Float32}], start , dims, buf)
         return buf
     elseif var_type[] == MINC2_DOUBLE
-        buf = Vector{Float64}(undef, var_length[])
-        @minc2_check minc2_read_variable(h.x, name, buf, var_length[], julia_to_minc2[Type{Float64}])
+        buf = Array{Float64}(undef, (dims...))
+        @minc2_check minc2_read_variable_raw(h.x, path, name, julia_to_minc2[Type{Float64}], start , dims, buf)
         return buf
     elseif var_type[] == MINC2_INT
-        buf = Vector{Int32}(undef, var_length[])
-        @minc2_check minc2_read_variable(h.x, name, buf, var_length[], julia_to_minc2[Type{Int32}])
+        buf = Array{Int32}(undef, (dims...))
+        @minc2_check minc2_read_variable_raw(h.x, path, name, julia_to_minc2[Type{Int32}], start , dims, buf)
         return buf
     elseif var_type[] == MINC2_SHORT
-        buf = Vector{Int16}(undef, var_length[])
-        @minc2_check minc2_read_variable(h.x, name, buf, var_length[], julia_to_minc2[Type{Int16}])
+        buf = Array{Int16}(undef, (dims...))
+        @minc2_check minc2_read_variable_raw(h.x, path, name, julia_to_minc2[Type{Int16}], start , dims, buf)
         return buf
     elseif var_type[] == MINC2_UINT
-        buf = Vector{UInt32}(undef, var_length[])
-        @minc2_check minc2_read_variable(h.x, name, buf, var_length[], julia_to_minc2[Type{UInt32}])
+        buf = Array{UInt32}(undef, (dims...))
+        @minc2_check minc2_read_variable_raw(h.x, path, name, julia_to_minc2[Type{UInt32}], start , dims, buf)
         return buf
     elseif var_type[] == MINC2_USHORT
-        buf = Vector{UInt16}(undef, var_length[])
-        @minc2_check minc2_read_variable(h.x, name, buf, var_length[], julia_to_minc2[Type{UInt16}])
+        buf = Array{UInt16}(undef, (dims...))
+        @minc2_check minc2_read_variable_raw(h.x, path, name, julia_to_minc2[Type{UInt16}], start , dims, buf)
         return buf
     elseif var_type[] == MINC2_BYTE
-        buf = Vector{Int8}(undef, var_length[])
-        @minc2_check minc2_read_variable(h.x, name, buf, var_length[], julia_to_minc2[Type{Int8}])
+        buf = Array{Int8}(undef, (dims...))
+        @minc2_check minc2_read_variable_raw(h.x, path, name, julia_to_minc2[Type{Int8}], start , dims, buf )
         return buf
     elseif var_type[] == MINC2_UBYTE
-        buf = Vector{UInt8}(undef, var_length[])
-        @minc2_check minc2_read_variable(h.x, name, buf, var_length[], julia_to_minc2[Type{UInt8}])
+        buf = Array{UInt8}(undef, (dims...))
+        @minc2_check minc2_read_variable_raw(h.x, path, name, julia_to_minc2[Type{UInt8}], start , dims, buf)
         return buf
     else
         throw(SystemError("MINC2 unsupported data type"))
     end
-
 end
 
-function write_variable(h::VolumeHandle, name::String, data::Vector{T}) where T<:Number
-    @minc2_check minc2_write_variable(
-        h.x, name, Base.unsafe_convert(Ptr{Cvoid}, data), length(data), julia_to_minc2[Type{T}])
+function write_variable(h::VolumeHandle, path::String, name::String, data::Vector{T}) where T<:Number
+    count = Cint[length(data)]
+    start = Cint[0]
+    @minc2_check minc2_write_variable_raw(
+        h.x, path, name, julia_to_minc2[Type{T}], start, count, data)
     return nothing
 end
+
+
 
 
 # -------------------- Attributes and history --------------------
@@ -659,7 +704,7 @@ function write_minc_volume_std(path::String, ::Type{Store},
     return nothing
 end
 
-function write_minc_volume_4D_std(path::String, ::Type{Store},
+function write_minc_volume_std_4D(path::String, ::Type{Store},
                                store_hdr::Union{MincHeader,Nothing},
                                time_coords::Union{Vector{Float64},Nothing},
                                time_widths::Union{Vector{Float64},Nothing},
@@ -675,10 +720,10 @@ function write_minc_volume_4D_std(path::String, ::Type{Store},
         end
         write_minc_volume_std(handle, volume)
         if !isnothing(time_coords)
-            write_variable(handle, "time", time_coords)
+            write_variable(handle, "dimensions", "time", time_coords)
         end
         if !isnothing(time_widths)
-            write_variable(handle, "time-width", time_widths)
+            write_variable(handle, "info", "time-width", time_widths)
         end
         close_minc_file(handle)
         finalize(handle)
@@ -692,6 +737,12 @@ function write_minc_volume_4D_std(path::String, ::Type{Store},
             write_history(handle, history)
         end
         write_minc_volume_std(handle, volume)
+        if !isnothing(time_coords)
+            write_variable(handle, "dimensions", "time", time_coords)
+        end
+        if !isnothing(time_widths)
+            write_variable(handle, "info", "time-width", time_widths)
+        end
         close_minc_file(in_h)
         close_minc_file(handle)
         finalize(handle)

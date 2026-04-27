@@ -6,10 +6,55 @@ using StaticArrays
 using DelimitedFiles
 using Tables
 
+@testset "minc2_simple tests" begin
+    @testset "Reading variable time" begin
+        h = Minc2.open_minc_file("input/test_4D.mnc")
+        ndims = Ref{Cint}(0)
+        @test Minc2.minc2_get_variable_ndims(h.x, "dimensions", "time", ndims) == Minc2.MINC2_SUCCESS
+        @test ndims[] == 1
+
+        dims = Vector{Cint}(undef, ndims[])
+        @test Minc2.minc2_get_variable_dims(h.x, "dimensions", "time", dims) == Minc2.MINC2_SUCCESS
+        @test dims[1] == 6
+
+        var_type = Ref{Cint}(0)
+        @test Minc2.minc2_get_variable_type(h.x, "dimensions", "time", var_type) == Minc2.MINC2_SUCCESS
+        @test var_type[] == Cint(Minc2.MINC2_DOUBLE )
+
+        time_dimensions = Vector{Float64}(undef, dims[1])
+        start = zeros(Cint, ndims[])
+        count = dims
+
+        @test Minc2.minc2_read_variable_raw(h.x, "dimensions", "time", Cint(Minc2.MINC2_DOUBLE ), start , dims, time_dimensions) == Minc2.MINC2_SUCCESS
+
+        @test time_dimensions ≈ [0.0, 300.0, 600.0, 900.0, 1200.0, 1500.0] atol=1e-6
+
+        Minc2.close_minc_file(h)
+    end
+end
+
+
 @testset "Low level io" begin
     @testset "Try open missing file" begin
         @test_throws Minc2.Minc2Error Minc2.open_minc_file("input/missing.mnc")
     end
+
+    @testset "read variable time" begin
+        h = Minc2.open_minc_file("input/test_4D.mnc")
+
+        @test Minc2.read_variable(h,"dimensions","time") ≈ [0.0, 300.0, 600.0, 900.0, 1200.0, 1500.0] atol=1e-6
+
+        Minc2.close_minc_file(h)
+    end
+
+    @testset "read variable time-width" begin
+        h = Minc2.open_minc_file("input/test_4D.mnc")
+        # info/time-width
+        @test Minc2.read_variable(h,"info","time-width") ≈ [300.0, 300.0, 300.0, 300.0, 300.0, 299.0] atol=1e-6
+
+        Minc2.close_minc_file(h)
+    end
+
 
     @testset "Reading attributes" begin
         h=Minc2.open_minc_file("input/t1_z+_byte_cor.mnc")
@@ -23,6 +68,7 @@ using Tables
         @test Minc2.read_attribute(h,"acquisition","StdString") == "Test std::string\0"
         Minc2.close_minc_file(h)
     end
+
 
     @testset "Testing coronal byte" begin
         h=Minc2.open_minc_file("input/t1_z+_byte_cor.mnc")
@@ -255,6 +301,61 @@ end
     end
 end
 
+
+@testset "High-level read_volume_4D" begin
+    v = Minc2.read_volume_4D("input/test_4D.mnc")
+    @test v isa Minc2.Volume4D{Float64}
+    @test ndims(Minc2.array(v)) == 4
+    @test size(Minc2.array(v))[4] == 6
+    @test v.time_coords ≈ [0.0, 300.0, 600.0, 900.0, 1200.0, 1500.0] atol=1e-6
+    @test v.time_widths ≈ [300.0, 300.0, 300.0, 300.0, 300.0, 299.0] atol=1e-6
+end
+
+@testset "read_minc_volume_std_history_4D return type" begin
+    rt = first(Base.return_types(Minc2.read_minc_volume_std_history_4D, Tuple{String, Type{Float64}}))
+    @test rt <: Tuple{Array, Minc2.MincHeader, Minc2.MincHeader, Vector{Float64}, Vector{Float64}, Union{String,Nothing}}
+end
+
+
+@testset "Writing 4D volume in Float64" begin
+    mktempdir() do tmp
+        in_vol,in_hdr,in_stor_hdr,in_time_coord, in_time_widths = Minc2.read_minc_volume_std_4D("input/test_4D.mnc", Float64)
+        Minc2.write_minc_volume_std_4D(joinpath(tmp,"test1.mnc"), Float64, in_stor_hdr, in_time_coord, in_time_widths, in_vol)
+
+        out_vol,out_hdr,out_stor_hdr,out_time_coord, out_time_widths = Minc2.read_minc_volume_std_4D(joinpath(tmp,"test1.mnc"), Float64)
+
+        @test in_hdr.dims == out_hdr.dims
+        @test in_hdr.start == out_hdr.start
+        @test in_hdr.step == out_hdr.step
+        @test in_hdr.dir_cos == out_hdr.dir_cos
+        @test in_vol ≈ out_vol
+        @test in_time_coord ≈ out_time_coord
+        @test in_time_widths ≈ out_time_widths
+    end
+end
+
+
+@testset "High-level save_volume_4D round trip" begin
+    mktempdir() do tmp
+        v = Minc2.read_volume_4D("input/test_4D.mnc")
+        path = joinpath(tmp, "round.mnc")
+        Minc2.save_volume_4D(path, v; store=Float64)
+        v2 = Minc2.read_volume_4D(path)
+
+        @test size(Minc2.array(v)) == size(Minc2.array(v2))
+        @test Minc2.array(v) ≈ Minc2.array(v2)
+        @test v.time_coords ≈ v2.time_coords
+        @test v.time_widths ≈ v2.time_widths
+        # spatial geometry preserved
+        s1, st1, dc1 = Minc2.decompose(Minc2.voxel_to_world(v))
+        s2, st2, dc2 = Minc2.decompose(Minc2.voxel_to_world(v2))
+        @test s1 ≈ s2 atol=1e-6
+        @test st1 ≈ st2 atol=1e-6
+        @test dc1 ≈ dc2 atol=1e-6
+    end
+end
+
+
 @testset "Writing 3D volume in short" begin
     mktempdir() do tmp
         in_vol,in_hdr,in_stor_hdr=Minc2.read_minc_volume_std("input/t1_z+_double_cor.mnc", Float64)
@@ -268,6 +369,23 @@ end
         @test in_hdr.step == out_hdr.step
         @test in_hdr.dir_cos == out_hdr.dir_cos
         @test in_vol ≈ out_vol atol=0.1
+    end
+end
+
+
+@testset "Reading 4D volume in double" begin
+    mktempdir() do tmp
+        in_vol, in_hdr, in_stor_hdr, time_coords, time_widths = Minc2.read_minc_volume_std_4D("input/test_4D.mnc", Float64)
+
+        # Minc2.write_minc_volume_std(joinpath(tmp,"test1.mnc"), Int16, in_stor_hdr, in_vol)
+
+        # out_vol,out_hdr,out_stor_hdr = Minc2.read_minc_volume_std(joinpath(tmp,"test1.mnc"), Float64)
+
+        # @test in_hdr.dims == out_hdr.dims
+        # @test in_hdr.start == out_hdr.start
+        # @test in_hdr.step == out_hdr.step
+        # @test in_hdr.dir_cos == out_hdr.dir_cos
+        # @test in_vol ≈ out_vol atol=0.1
     end
 end
 

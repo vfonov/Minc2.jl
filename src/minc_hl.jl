@@ -229,7 +229,7 @@ Read Volume4D from minc file
 * `store` - underlying array type
 """
 function read_volume_4D(fn::String; store::Type{T}=Float64)::Volume4D{T} where {T}
-    in_vol,in_hdr,in_store_hdr,time_coords,time_widths,in_history = read_minc_volume4d_std_history(fn, store)
+    in_vol, in_hdr, in_store_hdr, time_coords, time_widths, in_history = read_minc_volume_std_history_4D(fn, store)
     v2w = voxel_to_world(in_hdr)
 
     return Volume4D(in_vol, v2w, time_coords, time_widths, in_history)
@@ -364,19 +364,30 @@ Save Volume4D to minc file
 * `vol` - Volume4D to save
 * `store` - underlying MINC data type, to be used for storage
 """
-function save_volume_4D(fn::AbstractString, 
-        vol::Volume4D{T,N}; 
+function save_volume_4D(fn::AbstractString,
+        vol::Volume4D{T};
         store::Type{S}=Float32,
-        history=nothing) where {S,T,N}
-    
+        history=nothing) where {S,T}
+
     if isnothing(history)
         _history=vol.history
     else
         _history=(isnothing(vol.history) ? "" : vol.history * "\n" )*history
     end
 
-    write_minc_volume_4D_std(fn, store, vol.time_coords,
-      create_header_from_v2w(size(vol.vol), vol.v2w; time_dim=true), vol.vol; history=_history)
+    time_start = isempty(vol.time_coords) ? 0.0 : vol.time_coords[1]
+    time_step  = length(vol.time_coords) > 1 ?
+        (vol.time_coords[end] - vol.time_coords[1]) / (length(vol.time_coords) - 1) :
+        1.0
+
+    hdr = create_header_from_v2w(size(vol.vol), vol.v2w;
+                                 time_dim=true,
+                                 time_step=time_step,
+                                 time_start=time_start)
+
+    write_minc_volume_std_4D(fn, store, hdr,
+                             vol.time_coords, vol.time_widths, vol.vol;
+                             history=_history)
 end
 
 
