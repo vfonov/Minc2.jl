@@ -111,6 +111,10 @@ function minc2_open(h, path)
     ccall((:minc2_open, libminc2_simple), Cint, (minc2_file_handle, Ptr{Cchar}), h, path)
 end
 
+function minc2_open_rdwr(h, path)
+    ccall((:minc2_open_rdwr, libminc2_simple), Cint, (minc2_file_handle, Ptr{Cchar}), h, path)
+end
+
 function minc2_define(h, store_dims, store_data_type, data_type)
     ccall((:minc2_define, libminc2_simple), Cint, (minc2_file_handle, Ptr{minc2_dimension}, Cint, Cint), h, store_dims, store_data_type, data_type)
 end
@@ -421,6 +425,26 @@ end
 
 function minc2_tags_init(tags, n_tag_points, n_volumes, have_weights, have_strucure_ids, have_patient_ids, have_labels)
     ccall((:minc2_tags_init, libminc2_simple), Cint, (minc2_tags_handle, Cint, Cint, Cint, Cint, Cint, Cint), tags, n_tag_points, n_volumes, have_weights, have_strucure_ids, have_patient_ids, have_labels)
+end
+
+function minc2_get_variable_ndims(h, path, name, ndims)
+    ccall((:minc2_get_variable_ndims, libminc2_simple), Cint, (minc2_file_handle, Ptr{Cchar}, Ptr{Cchar}, Ptr{Cint}), h, path, name, ndims)
+end
+
+function minc2_get_variable_dims(h, path, name, dims)
+    ccall((:minc2_get_variable_dims, libminc2_simple), Cint, (minc2_file_handle, Ptr{Cchar}, Ptr{Cchar}, Ptr{Cint}), h, path, name, dims)
+end
+
+function minc2_get_variable_type(h, path, name, minc2_type_)
+    ccall((:minc2_get_variable_type, libminc2_simple), Cint, (minc2_file_handle, Ptr{Cchar}, Ptr{Cchar}, Ptr{Cint}), h, path, name, minc2_type_)
+end
+
+function minc2_read_variable_raw(h, path, name, representation_type, start, count, buffer)
+    ccall((:minc2_read_variable_raw, libminc2_simple), Cint, (minc2_file_handle, Ptr{Cchar}, Ptr{Cchar}, Cint, Ptr{Cint}, Ptr{Cint}, Ptr{Cvoid}), h, path, name, representation_type, start, count, buffer)
+end
+
+function minc2_write_variable_raw(h, path, name, representation_type, start, count, buffer)
+    ccall((:minc2_write_variable_raw, libminc2_simple), Cint, (minc2_file_handle, Ptr{Cchar}, Ptr{Cchar}, Cint, Ptr{Cint}, Ptr{Cint}, Ptr{Cvoid}), h, path, name, representation_type, start, count, buffer)
 end
 
 # exports

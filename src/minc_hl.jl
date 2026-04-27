@@ -6,7 +6,7 @@ using Dates
 """
     Volume3D{T,N}
 
-An abstract 3D volume, could be vector field or volume with time dimension
+An abstract 3D volume, could be vector field
 """
 struct Volume3D{T,N}
     "underlying array"
@@ -18,11 +18,39 @@ struct Volume3D{T,N}
 end
 
 """
+    Volume4D{T,N}
+
+An abstract 4D volume, 3 spatial dimensuions and time 
+"""
+struct Volume4D{T}
+    "underlying array"
+    vol::Array{T,4} 
+    "Voxel to world affine transform"
+    v2w::AffineTransform{Float64}
+    "time coordinates"
+    time_coords::Vector{Float64} 
+    "time widths"
+    time_widths::Vector{Float64}
+    "minc history"
+    history::Union{String,Nothing}
+end
+
+
+
+"""
     voxel_to_world(vol::Volume3D)
 
 Extract voxel to world affine transform from a Volume3D
 """
 voxel_to_world(vol::Volume3D) = vol.v2w
+
+"""
+    voxel_to_world(vol::Volume4D)
+
+Extract voxel to world affine transform from a Volume4D
+"""
+voxel_to_world(vol::Volume4D) = vol.v2w
+
 
 """
     world_to_voxel(vol::Volume3D)
@@ -34,6 +62,17 @@ function world_to_voxel(vol::Volume3D)
     return inv(v2w)
 end
 
+"""
+    world_to_voxel(vol::Volume4D)
+
+Extract world to voxel affine transform from a Volume4D
+"""
+function world_to_voxel(vol::Volume4D)
+    v2w=voxel_to_world(vol)
+    return inv(v2w)
+end
+
+
 
 """
     array(vol::Volume3D)
@@ -44,11 +83,26 @@ array(vol::Volume3D) = vol.vol
 
 
 """
+    array(vol::Volume4D)
+
+Extract underlying plain array
+"""
+array(vol::Volume4D) = vol.vol
+
+
+"""
     history(vol::Volume3D)
 
 Extract history metadata
 """
 history(vol::Volume3D) = vol.history
+
+"""
+    history(vol::Volume4D)
+
+Extract history metadata
+"""
+history(vol::Volume4D) = vol.history
 
 
 """
@@ -66,6 +120,25 @@ function Volume3D(vol::Array{T,N}, v2w::AffineTransform{Float64};
     return Volume3D(vol, v2w, history)
 end
 
+"""
+    Volume4D(vol::Array{T,N}, v2w::AffineTransform{Float64}, time_coords::Vector{Float64}, time_widths::Vector{Float64}; 
+        history::Union{AbstractString,Nothing}=nothing)::Volume4D{T,N}
+
+Create Volume4D from an array and affine transform
+
+* `vol` - underlying array
+* `v2w` - voxel to world affine transform
+* `time_coords` - time coordinates
+* `time_widths` - time widths
+* `history` - minc history
+"""
+function Volume4D(vol::Array{T,4}, v2w::AffineTransform{Float64}, 
+        time_coords::Vector{Float64}, time_widths::Vector{Float64}; 
+        history::Union{AbstractString, Nothing}=nothing)::Volume4D{T} where {T}
+    return Volume4D(vol, v2w, time_coords, time_widths, history)
+end
+
+
 
 """
     Volume3D(vol::Array{T,N}, like::Volume3D; 
@@ -81,6 +154,22 @@ function Volume3D(vol::Array{T,N}, like::Volume3D;
         history::Union{AbstractString,Nothing}=nothing)::Volume3D{T,N}  where {T,N}
     return Volume3D(vol, like.v2w, isnothing(history) ? like.history : history)
 end
+
+"""
+    Volume4D(vol::Array{T,4}, like::Volume4D; 
+        history::Union{AbstractString,Nothing}=nothing)::Volume4D{T}
+
+Create Volume4D from an array and another Volume4D that is used for sampling information
+
+* `vol` - underlying array
+* `like` - Volume4D that is used for sampling information
+* `history` - minc history
+"""
+function Volume4D(vol::Array{T,4}, like::Volume4D; 
+        history::Union{AbstractString,Nothing}=nothing)::Volume4D{T}  where {T}
+    return Volume4D(vol, like.v2w, like.time_coords, like.time_widths, isnothing(history) ? like.history : history)
+end
+
 
 
 """
@@ -128,6 +217,22 @@ function read_volume(fn::String; store::Type{T}=Float64)::Volume3D{T} where {T}
     v2w = voxel_to_world(in_hdr)
 
     return Volume3D(in_vol, v2w, in_history)
+end
+
+
+"""
+    read_volume_4D(fn::String; store::Type{T}=Float64)::Volume4D{T}
+
+Read Volume4D from minc file
+
+* `fn` - filename
+* `store` - underlying array type
+"""
+function read_volume_4D(fn::String; store::Type{T}=Float64)::Volume4D{T} where {T}
+    in_vol,in_hdr,in_store_hdr,time_coords,time_widths,in_history = read_minc_volume4d_std_history(fn, store)
+    v2w = voxel_to_world(in_hdr)
+
+    return Volume4D(in_vol, v2w, time_coords, time_widths, in_history)
 end
 
 
@@ -248,6 +353,35 @@ end
 
 
 """
+    save_volume_4D(fn::AbstractString, 
+        vol::Volume4D{T,N}; 
+        store::Type{S}=Float32,
+        history=nothing)
+
+Save Volume4D to minc file
+
+* `fn` - filename
+* `vol` - Volume4D to save
+* `store` - underlying MINC data type, to be used for storage
+"""
+function save_volume_4D(fn::AbstractString, 
+        vol::Volume4D{T,N}; 
+        store::Type{S}=Float32,
+        history=nothing) where {S,T,N}
+    
+    if isnothing(history)
+        _history=vol.history
+    else
+        _history=(isnothing(vol.history) ? "" : vol.history * "\n" )*history
+    end
+
+    write_minc_volume_4D_std(fn, store, vol.time_coords,
+      create_header_from_v2w(size(vol.vol), vol.v2w; time_dim=true), vol.vol; history=_history)
+end
+
+
+
+"""
     resample_grid_volume!(
         in_vol::AbstractArray{T,4},
         out_vol::AbstractArray{T,4},
@@ -324,7 +458,8 @@ function resample_grid(
       out_vol = similar(like.vol)
       v2w = like.v2w
     end
-    resample_grid_volume!(in_grid.vol, out_vol, in_grid.v2w, inv(v2w), itfm; 
+
+    resample_grid_volume!(in_grid.vol, out_vol, v2w, inv(in_grid.v2w), itfm; 
         interp=BSpline(Linear()))
     return Volume3D(out_vol, v2w)
 end
@@ -348,7 +483,7 @@ function resample_grid!(
         out_grid::Volume3D{T,4},
         itfm::Union{Vector{XFM}, XFM}=nothing)::Volume3D{T,4} where {T, XFM<:AnyTransform}
 
-    resample_grid_volume!(in_grid.vol, out_grid.vol, in_grid.v2w, inv(out_grid.v2w), itfm; 
+    resample_grid_volume!(in_grid.vol, out_grid.vol, out_grid.v2w, inv(in_grid.v2w), itfm; 
         interp=BSpline(Linear()))
     return out_grid
 end
@@ -635,6 +770,60 @@ function resample_volume(
         store = (isnothing(like) ? eltype(in_vol.vol) : eltype(like.vol) ) )
 
     return resample_volume!(in_vol, out_vol; tfm, itfm, interp, fill, order, ftol, max_iter)
+end
+
+
+function spatial_resample_volume!(
+            in_vol::AbstractArray{T,4},
+            out_vol::AbstractArray{T,4},
+            v2w::Minc2.AffineTransform{C},
+            w2v::Minc2.AffineTransform{C},
+            itfm::Union{Vector{XFM}, XFM};
+            interp::I=BSpline(Linear()),
+            fill=0.0,
+            ftol=1.0/80,
+            max_iter=10)::AbstractArray{T,4} where {T, C, I, XFM<:Minc2.AnyTransform}
+
+        # NEED to interpolate only over spatial dimensions
+        in_vol_itp = extrapolate( interpolate( in_vol, (interp, interp, interp, NoInterp())), fill)
+        #@simd
+        @simd for c in CartesianIndices(size(out_vol)[1:3])
+            orig = Minc2.transform_point(v2w, c )
+            dst  = Minc2.transform_point(itfm, orig; ftol, max_iter )
+            dst_v= Minc2.transform_point(w2v, dst ) .+ 1.0
+
+            for i in eachindex(view(out_vol,1,1,1,:))
+                @inbounds out_vol[c,i] = in_vol_itp(dst_v...,i)
+            end
+        end
+        out_vol
+    end
+
+function spatial_resample_volume!(
+        in_vol::Volume4D{T},
+        out_vol::Volume4D{T};
+        itfm::Union{Vector{XFM}, XFM, Nothing}=nothing, 
+        fill=0.0, order=1)::Volume4D{T} where {T, XFM<:AnyTransform}
+    
+    if order==0
+        interp=NoInterp()
+    elseif order==1
+        interp=BSpline(Linear())
+    elseif order==2
+        interp=BSpline(Quadratic(Line(OnGrid())))
+    elseif order==3
+        interp=BSpline(Cubic(Line(OnGrid())))
+    else
+        error("Unsupported interpolation order: $order")
+    end
+    if itfm === nothing
+        itfm = IdentityTransform()
+    end
+
+    spatial_resample_volume!(in_vol.vol, out_vol.vol, out_vol.v2w, inv(in_vol.v2w), itfm; 
+        interp=interp, fill=fill)
+
+    return out_vol
 end
 
 
