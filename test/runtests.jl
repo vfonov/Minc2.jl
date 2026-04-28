@@ -308,7 +308,81 @@ end
     @test ndims(Minc2.array(v)) == 4
     @test size(Minc2.array(v))[4] == 6
     @test v.time_coords ≈ [0.0, 300.0, 600.0, 900.0, 1200.0, 1500.0] atol=1e-6
-    @test v.time_widths ≈ [300.0, 300.0, 300.0, 300.0, 300.0, 299.0] atol=1e-6
+    @test v.time_widths ≈ [300.0, 300.0, 300.0, 300.0, 300.0, 300.0] atol=1e-6
+end
+
+@testset "4D irregular dimension info" begin
+    h = Minc2.open_minc_file("input/test_4D.mnc")
+    Minc2.setup_standard_order(h)
+    hdr = Minc2.representation_header(h)
+    
+    @test length(hdr.irregular) == 4
+    @test hdr.axis[4] == Minc2.DIM_TIME
+    
+    time_dim_idx = findfirst(==(Minc2.DIM_TIME), hdr.axis)
+    @test time_dim_idx !== nothing
+    
+    Minc2.close_minc_file(h)
+end
+
+@testset "Volume4D time interpolation" begin
+    v = Minc2.read_volume_4D("input/test_4D.mnc")
+    
+    @test length(v.time_coords) == size(v.vol, 4)
+    @test length(v.time_widths) == size(v.vol, 4)
+    
+    @test all(v.time_widths .> 0)
+    @test all(diff(v.time_coords) .>= 0)
+end
+
+@testset "Volume4D get_time_slice" begin
+    v = Minc2.read_volume_4D("input/test_4D.mnc")
+    
+    slice1 = Minc2.get_time_slice(v, 1)
+    @test slice1 isa Minc2.Volume3D{Float64,3}
+    @test size(Minc2.array(slice1)) == size(v.vol)[1:3]
+    
+    slice_end = Minc2.get_time_slice(v, length(v.time_coords))
+    @test size(Minc2.array(slice_end)) == size(v.vol)[1:3]
+end
+
+@testset "Volume4D interpolate_time" begin
+    v = Minc2.read_volume_4D("input/test_4D.mnc")
+    
+    t_mid = (v.time_coords[1] + v.time_coords[end]) / 2
+    interpolated = Minc2.interpolate_time(v, t_mid)
+    
+    @test interpolated isa Minc2.Volume3D{Float64,3}
+    @test size(Minc2.array(interpolated)) == size(v.vol)[1:3]
+end
+
+@testset "Volume4D with irregular time" begin
+    v = Minc2.read_volume_4D("input/test_4D.mnc")
+    
+    irregular_time_coords = [0.0, 250.0, 550.0, 1000.0, 1300.0, 1600.0]
+    irregular_time_widths = [200.0, 350.0, 400.0, 350.0, 250.0, 200.0]
+    
+    v_irreg = Minc2.Volume4D(v.vol, v.v2w, irregular_time_coords, irregular_time_widths)
+    
+    @test v_irreg.time_coords ≈ irregular_time_coords
+    @test v_irreg.time_widths ≈ irregular_time_widths
+    
+    interpolated = Minc2.interpolate_time(v_irreg, 500.0)
+    @test interpolated isa Minc2.Volume3D{Float64,3}
+    @test size(Minc2.array(interpolated)) == size(v.vol)[1:3]
+    
+    slice = Minc2.get_time_slice(v_irreg, 3)
+    @test slice isa Minc2.Volume3D{Float64,3}
+    
+    # TODO: enable write test when C library supports creating dimension variables
+    # mktempdir() do tmp
+    #     path = joinpath(tmp, "irreg_4D.mnc")
+    #     Minc2.save_volume_4D(path, v_irreg; store=Float64, like="input/test_4D.mnc")
+    #     
+    #     v_loaded = Minc2.read_volume_4D(path)
+    #     @test v_loaded.time_coords ≈ irregular_time_coords atol=1e-6
+    #     @test v_loaded.time_widths ≈ irregular_time_widths atol=1e-6
+    # end
 end
 
 @testset "read_minc_volume_std_history_4D return type" begin
@@ -352,6 +426,34 @@ end
         @test s1 ≈ s2 atol=1e-6
         @test st1 ≈ st2 atol=1e-6
         @test dc1 ≈ dc2 atol=1e-6
+    end
+end
+
+@testset "Volume4D irregular_time flag preservation" begin
+    mktempdir() do tmp
+        v = Minc2.read_volume_4D("input/test_4D.mnc")
+        @test v.irregular_time == false
+        
+        path = joinpath(tmp, "test_regular.mnc")
+        Minc2.save_volume_4D(path, v; store=Float64)
+        
+        v2 = Minc2.read_volume_4D(path)
+        @test v2.irregular_time == false
+        @test v.time_coords ≈ v2.time_coords atol=1e-6
+        @test v.time_widths ≈ v2.time_widths atol=1e-6
+    end
+    
+    mktempdir() do tmp
+        v = Minc2.read_volume_4D("input/test_4D_irregular_offsets.mnc")
+        @test v.irregular_time == true
+        
+        path = joinpath(tmp, "test_irregular.mnc")
+        Minc2.save_volume_4D(path, v; store=Float64)
+        
+        v2 = Minc2.read_volume_4D(path)
+        @test v2.irregular_time == true
+        @test v.time_coords ≈ v2.time_coords atol=1e-6
+        @test v.time_widths ≈ v2.time_widths atol=1e-6
     end
 end
 

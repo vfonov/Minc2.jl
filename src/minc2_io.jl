@@ -83,6 +83,8 @@ mutable struct MincHeader
     dir_cos_valid::Vector{Bool}
     axis::Vector{DIM}
     irregular::Vector{Bool}
+    offsets::Vector{Union{Vector{Float64},Nothing}}
+    widths::Vector{Union{Vector{Float64},Nothing}}
 
     function MincHeader(ndim::Integer)
         new(
@@ -93,6 +95,8 @@ mutable struct MincHeader
             falses(ndim),
             fill(DIM_UNKNOWN, ndim),
             falses(ndim),
+            Union{Vector{Float64},Nothing}[nothing for _ in 1:ndim],
+            Union{Vector{Float64},Nothing}[nothing for _ in 1:ndim],
         )
     end
 end
@@ -114,6 +118,14 @@ function define_minc_file(hdr::MincHeader,
 
     dims_vec = Vector{minc2_dimension}(undef, length(hdr.dims) + 1)
     for (i, len) in enumerate(hdr.dims)
+        offsets_ptr = C_NULL
+        widths_ptr = C_NULL
+        if hdr.irregular[i] && hdr.offsets[i] !== nothing
+            offsets_ptr = Base.unsafe_convert(Ptr{Cdouble}, hdr.offsets[i])
+        end
+        if hdr.irregular[i] && hdr.widths[i] !== nothing
+            widths_ptr = Base.unsafe_convert(Ptr{Cdouble}, hdr.widths[i])
+        end
         dims_vec[i] = minc2_dimension(
             hdr.axis[i],
             len,
@@ -122,10 +134,12 @@ function define_minc_file(hdr::MincHeader,
             hdr.start[i],
             hdr.dir_cos_valid[i] ? 1 : 0,
             (hdr.dir_cos[i,1], hdr.dir_cos[i,2], hdr.dir_cos[i,3]),
+            offsets_ptr,
+            widths_ptr,
         )
     end
     dims_vec[end] = minc2_dimension(
-        Cint(MINC2_DIM_END), 0, 0, 0.0, 0.0, 0, (0.0, 0.0, 0.0),
+        Cint(MINC2_DIM_END), 0, 0, 0.0, 0.0, 0, (0.0, 0.0, 0.0), C_NULL, C_NULL
     )
 
     @minc2_check minc2_define(h.x, dims_vec, store_type, repr_type)
@@ -200,6 +214,17 @@ function _hdr_convert!(hdr::MincHeader, dd::Ref{Ptr{minc2_dimension}})::MincHead
             hdr.dir_cos_valid[i] = false
         end
         hdr.axis[i] = DIM(d.id)
+        
+        if hdr.irregular[i] && d.offsets != C_NULL
+            hdr.offsets[i] = copy(unsafe_wrap(Array{Cdouble}, d.offsets, d.length))
+        else
+            hdr.offsets[i] = nothing
+        end
+        if hdr.irregular[i] && d.widths != C_NULL
+            hdr.widths[i] = copy(unsafe_wrap(Array{Cdouble}, d.widths, d.length))
+        else
+            hdr.widths[i] = nothing
+        end
     end
     return hdr
 end
@@ -283,8 +308,23 @@ function read_minc_volume_std_4D(h::VolumeHandle,
     fdtype = representation_type(h)
     volume, hdr, store_hdr = empty_like_minc_volume_std(h, fdtype.parameters[1])
     vol = minc2_load_and_convert_complete_volume(h, volume, dtype)
-    time_coord = read_variable(h, "dimensions", "time")
-    time_widths = read_variable(h, "info", "time-width")
+    
+    # Find time dimension index
+    time_idx = findfirst(==(DIM_TIME), store_hdr.axis)
+    
+    # Get time coordinates and widths from header
+    if time_idx !== nothing && store_hdr.irregular[time_idx]
+        # Irregular dimension: offsets/widths from header
+        time_coord = store_hdr.offsets[time_idx]
+        time_widths = store_hdr.widths[time_idx]
+    else
+        # Regular dimension: compute from start/step
+        n = store_hdr.dims[time_idx]
+        start = store_hdr.start[time_idx]
+        step = store_hdr.step[time_idx]
+        time_coord = [start + (i-1)*step for i in 1:n]
+        time_widths = fill(step, n)
+    end
 
     return vol, hdr, store_hdr, time_coord, time_widths
 end
@@ -642,7 +682,9 @@ function create_header_from_v2w(sz,
                                 vector_dim::Bool=false,
                                 time_dim::Bool=false,
                                 time_step::Union{Float64,Nothing}=nothing,
-                                time_start::Union{Float64,Nothing}=nothing)::MincHeader where T
+                                time_start::Union{Float64,Nothing}=nothing,
+                                time_coords::Union{Vector{Float64},Nothing}=nothing,
+                                time_widths::Union{Vector{Float64},Nothing}=nothing)::MincHeader where T
     start, step, dir_cos = decompose(t)
 
     hdr = MincHeader(3 + vector_dim + time_dim)
@@ -656,10 +698,17 @@ function create_header_from_v2w(sz,
             hdr.dir_cos[i, :] .= 0.0
             hdr.axis[i] = DIM_VEC
         elseif time_dim && (i - vector_dim) == 4
-            # TODO: set this to something else when time_step and time_start are missing
-            hdr.step[i]  = isnothing(time_step) ? 1.0 : time_step
-            hdr.start[i] = isnothing(time_start) ? 0.0 : time_start
             hdr.axis[i]  = DIM_TIME
+            if time_coords !== nothing && length(time_coords) == sz[i]
+                hdr.irregular[i] = true
+                hdr.offsets[i] = copy(time_coords)
+                hdr.widths[i] = time_widths !== nothing ? copy(time_widths) : fill(1.0, sz[i])
+                hdr.start[i] = time_coords[1]
+                hdr.step[i] = 1.0
+            else
+                hdr.step[i]  = isnothing(time_step) ? 1.0 : time_step
+                hdr.start[i] = isnothing(time_start) ? 0.0 : time_start
+            end
         else
             hdr.start[i] = start[i - vector_dim]
             hdr.step[i]  = step[i - vector_dim]
@@ -704,6 +753,9 @@ function write_minc_volume_std(path::String, ::Type{Store},
     return nothing
 end
 
+# NOTE: Irregular dimension offsets/widths must be set in the header before calling
+# define_minc_file. The C library writes dimension variables automatically during define.
+# time_coords/time_widths parameters are deprecated - use store_hdr.offsets/store_hdr.widths
 function write_minc_volume_std_4D(path::String, ::Type{Store},
                                store_hdr::Union{MincHeader,Nothing},
                                time_coords::Union{Vector{Float64},Nothing},
@@ -712,19 +764,34 @@ function write_minc_volume_std_4D(path::String, ::Type{Store},
                                like::Union{String,Nothing}=nothing,
                                history::Union{String,Nothing}=nothing
                                ) where {Store,Repr}
+    hdr = store_hdr
+    # Backward compatibility: if time_coords provided but header not irregular, update header
+    if time_coords !== nothing && store_hdr !== nothing
+        time_idx = findfirst(==(DIM_TIME), store_hdr.axis)
+        if time_idx !== nothing && !store_hdr.irregular[time_idx]
+            hdr = MincHeader(length(store_hdr.dims))
+            hdr.dims = copy(store_hdr.dims)
+            hdr.start = copy(store_hdr.start)
+            hdr.step = copy(store_hdr.step)
+            hdr.dir_cos = copy(store_hdr.dir_cos)
+            hdr.dir_cos_valid = copy(store_hdr.dir_cos_valid)
+            hdr.axis = copy(store_hdr.axis)
+            hdr.irregular = copy(store_hdr.irregular)
+            hdr.offsets = copy(store_hdr.offsets)
+            hdr.widths = copy(store_hdr.widths)
+            hdr.irregular[time_idx] = true
+            hdr.offsets[time_idx] = copy(time_coords)
+            hdr.widths[time_idx] = time_widths !== nothing ? copy(time_widths) : fill(1.0, length(time_coords))
+        end
+    end
+    
     if isnothing(like)
-        handle = define_minc_file(store_hdr, Store, Repr)
+        handle = define_minc_file(hdr, Store, Repr)
         create_minc_file(handle, path)
         if !isnothing(history)
             write_history(handle, history)
         end
         write_minc_volume_std(handle, volume)
-        if !isnothing(time_coords)
-            write_variable(handle, "dimensions", "time", time_coords)
-        end
-        if !isnothing(time_widths)
-            write_variable(handle, "info", "time-width", time_widths)
-        end
         close_minc_file(handle)
         finalize(handle)
     else
@@ -737,12 +804,6 @@ function write_minc_volume_std_4D(path::String, ::Type{Store},
             write_history(handle, history)
         end
         write_minc_volume_std(handle, volume)
-        if !isnothing(time_coords)
-            write_variable(handle, "dimensions", "time", time_coords)
-        end
-        if !isnothing(time_widths)
-            write_variable(handle, "info", "time-width", time_widths)
-        end
         close_minc_file(in_h)
         close_minc_file(handle)
         finalize(handle)

@@ -51,6 +51,8 @@ struct minc2_dimension
     start::Cdouble
     have_dir_cos::Cint
     dir_cos::NTuple{3, Cdouble}
+    offsets::Ptr{Cdouble}
+    widths::Ptr{Cdouble}
 end
 
 mutable struct minc2_info_iterator end

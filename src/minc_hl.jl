@@ -33,6 +33,8 @@ struct Volume4D{T}
     time_widths::Vector{Float64}
     "minc history"
     history::Union{String,Nothing}
+    "whether time dimension is irregularly sampled"
+    irregular_time::Bool
 end
 
 
@@ -134,8 +136,9 @@ Create Volume4D from an array and affine transform
 """
 function Volume4D(vol::Array{T,4}, v2w::AffineTransform{Float64}, 
         time_coords::Vector{Float64}, time_widths::Vector{Float64}; 
-        history::Union{AbstractString, Nothing}=nothing)::Volume4D{T} where {T}
-    return Volume4D(vol, v2w, time_coords, time_widths, history)
+        history::Union{AbstractString, Nothing}=nothing,
+        irregular_time=false)::Volume4D{T} where {T}
+    return Volume4D(vol, v2w, time_coords, time_widths, isnothing(history) ? nothing : String(history), irregular_time)
 end
 
 
@@ -167,9 +170,68 @@ Create Volume4D from an array and another Volume4D that is used for sampling inf
 """
 function Volume4D(vol::Array{T,4}, like::Volume4D; 
         history::Union{AbstractString,Nothing}=nothing)::Volume4D{T}  where {T}
-    return Volume4D(vol, like.v2w, like.time_coords, like.time_widths, isnothing(history) ? like.history : history)
+    return Volume4D(vol, like.v2w, like.time_coords, like.time_widths, isnothing(history) ? like.history : history, like.irregular_time)
 end
 
+
+"""
+    get_time_slice(vol::Volume4D, t::Integer)::Volume3D
+
+Extract a single time slice from a 4D volume
+
+* `vol` - 4D volume
+* `t` - time index (1-based)
+"""
+function get_time_slice(vol::Volume4D, t::Integer)::Volume3D
+    @boundscheck 1 <= t <= size(vol.vol, 4)
+    slice_vol = vol.vol[:, :, :, t]
+    return Volume3D(slice_vol, vol.v2w, vol.history)
+end
+
+
+"""
+    interpolate_time(vol::Volume4D, t::Float64)::Volume3D
+
+Interpolate volume at arbitrary time point using linear interpolation
+
+* `vol` - 4D volume
+* `t` - time value in same units as time_coords
+"""
+function interpolate_time(vol::Volume4D, t::Float64)::Volume3D
+    coords = vol.time_coords
+    widths = vol.time_widths
+    
+    if t <= coords[1]
+        return get_time_slice(vol, 1)
+    elseif t >= coords[end]
+        return get_time_slice(vol, length(coords))
+    end
+    
+    idx = searchsortedfirst(coords, t)
+    if idx == 1
+        return get_time_slice(vol, 1)
+    elseif idx > length(coords)
+        return get_time_slice(vol, length(coords))
+    end
+    
+    t1 = coords[idx - 1]
+    t2 = coords[idx]
+    w = (t - t1) / (t2 - t1)
+    
+    slice1 = get_time_slice(vol, idx - 1)
+    slice2 = get_time_slice(vol, idx)
+    
+    interpolated_vol = (1 - w) .* slice1.vol .+ w .* slice2.vol
+    return Volume3D(interpolated_vol, vol.v2w, vol.history)
+end
+
+
+"""
+    Base.show(io::IO, z::Volume4D{T})
+
+Print Volume4D info
+"""
+Base.show(io::IO, z::Volume4D{T}) where {T} = print(io, "Volume4D{$T}:", size(z.vol), " time=[", z.time_coords[1], ",", z.time_coords[end], "]")
 
 
 """
@@ -231,8 +293,11 @@ Read Volume4D from minc file
 function read_volume_4D(fn::String; store::Type{T}=Float64)::Volume4D{T} where {T}
     in_vol, in_hdr, in_store_hdr, time_coords, time_widths, in_history = read_minc_volume_std_history_4D(fn, store)
     v2w = voxel_to_world(in_hdr)
+    
+    time_idx = findfirst(==(DIM_TIME), in_store_hdr.axis)
+    irregular_time = time_idx !== nothing && in_store_hdr.irregular[time_idx]
 
-    return Volume4D(in_vol, v2w, time_coords, time_widths, in_history)
+    return Volume4D(in_vol, v2w, time_coords, time_widths, in_history, irregular_time)
 end
 
 
@@ -356,18 +421,23 @@ end
     save_volume_4D(fn::AbstractString, 
         vol::Volume4D{T,N}; 
         store::Type{S}=Float32,
-        history=nothing)
+        history=nothing,
+        like::Union{String,Nothing}=nothing)
 
-Save Volume4D to minc file
+Save Volume4D to minc file. Time coordinates and widths are automatically
+preserved for irregular time sampling.
 
 * `fn` - filename
 * `vol` - Volume4D to save
 * `store` - underlying MINC data type, to be used for storage
+* `history` - additional history string
+* `like` - optional: use existing MINC file as template for metadata (attributes, etc.)
 """
 function save_volume_4D(fn::AbstractString,
         vol::Volume4D{T};
         store::Type{S}=Float32,
-        history=nothing) where {S,T}
+        history=nothing,
+        like::Union{String,Nothing}=nothing) where {S,T}
 
     if isnothing(history)
         _history=vol.history
@@ -383,11 +453,13 @@ function save_volume_4D(fn::AbstractString,
     hdr = create_header_from_v2w(size(vol.vol), vol.v2w;
                                  time_dim=true,
                                  time_step=time_step,
-                                 time_start=time_start)
+                                 time_start=time_start,
+                                 time_coords=vol.irregular_time ? vol.time_coords : nothing,
+                                 time_widths=vol.irregular_time ? vol.time_widths : nothing)
 
-    write_minc_volume_std_4D(fn, store, hdr,
-                             vol.time_coords, vol.time_widths, vol.vol;
-                             history=_history)
+    write_minc_volume_std_4D(fn, store, hdr, vol.irregular_time ? vol.time_coords : nothing, 
+                             vol.irregular_time ? vol.time_widths : nothing, vol.vol;
+                             history=_history, like=like)
 end
 
 
