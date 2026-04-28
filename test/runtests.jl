@@ -309,6 +309,7 @@ end
     @test size(Minc2.array(v))[4] == 6
     @test v.time_coords ≈ [0.0, 300.0, 600.0, 900.0, 1200.0, 1500.0] atol=1e-6
     @test v.time_widths ≈ [300.0, 300.0, 300.0, 300.0, 300.0, 300.0] atol=1e-6
+    @test v.irregular_time == false
 end
 
 @testset "4D irregular dimension info" begin
@@ -318,6 +319,7 @@ end
     
     @test length(hdr.irregular) == 4
     @test hdr.axis[4] == Minc2.DIM_TIME
+    @test hdr.irregular[4] == 0 # irregular time dimension
     
     time_dim_idx = findfirst(==(Minc2.DIM_TIME), hdr.axis)
     @test time_dim_idx !== nothing
@@ -325,7 +327,7 @@ end
     Minc2.close_minc_file(h)
 end
 
-@testset "Volume4D time interpolation" begin
+@testset "Volume4D time information" begin
     v = Minc2.read_volume_4D("input/test_4D.mnc")
     
     @test length(v.time_coords) == size(v.vol, 4)
@@ -356,47 +358,16 @@ end
     @test size(Minc2.array(interpolated)) == size(v.vol)[1:3]
 end
 
-@testset "Volume4D with irregular time" begin
-    v = Minc2.read_volume_4D("input/test_4D.mnc")
-    
-    irregular_time_coords = [0.0, 250.0, 550.0, 1000.0, 1300.0, 1600.0]
-    irregular_time_widths = [200.0, 350.0, 400.0, 350.0, 250.0, 200.0]
-    
-    v_irreg = Minc2.Volume4D(v.vol, v.v2w, irregular_time_coords, irregular_time_widths)
-    
-    @test v_irreg.time_coords ≈ irregular_time_coords
-    @test v_irreg.time_widths ≈ irregular_time_widths
-    
-    interpolated = Minc2.interpolate_time(v_irreg, 500.0)
-    @test interpolated isa Minc2.Volume3D{Float64,3}
-    @test size(Minc2.array(interpolated)) == size(v.vol)[1:3]
-    
-    slice = Minc2.get_time_slice(v_irreg, 3)
-    @test slice isa Minc2.Volume3D{Float64,3}
-    
-    # TODO: enable write test when C library supports creating dimension variables
-    # mktempdir() do tmp
-    #     path = joinpath(tmp, "irreg_4D.mnc")
-    #     Minc2.save_volume_4D(path, v_irreg; store=Float64, like="input/test_4D.mnc")
-    #     
-    #     v_loaded = Minc2.read_volume_4D(path)
-    #     @test v_loaded.time_coords ≈ irregular_time_coords atol=1e-6
-    #     @test v_loaded.time_widths ≈ irregular_time_widths atol=1e-6
-    # end
-end
-
-@testset "read_minc_volume_std_history_4D return type" begin
-    rt = first(Base.return_types(Minc2.read_minc_volume_std_history_4D, Tuple{String, Type{Float64}}))
-    @test rt <: Tuple{Array, Minc2.MincHeader, Minc2.MincHeader, Vector{Float64}, Vector{Float64}, Union{String,Nothing}}
-end
-
 
 @testset "Writing 4D volume in Float64" begin
     mktempdir() do tmp
-        in_vol,in_hdr,in_stor_hdr,in_time_coord, in_time_widths = Minc2.read_minc_volume_std_4D("input/test_4D.mnc", Float64)
-        Minc2.write_minc_volume_std_4D(joinpath(tmp,"test1.mnc"), Float64, in_stor_hdr, in_time_coord, in_time_widths, in_vol)
+        in_vol, in_hdr, in_stor_hdr = Minc2.read_minc_volume_std("input/test_4D.mnc", Float64)
+        
+        in_time_coord, in_time_widths, in_irregular_time = Minc2.extract_time_info(in_hdr)
+        Minc2.write_minc_volume_std(joinpath(tmp,"test1.mnc"), Float64, in_stor_hdr, in_vol)
 
-        out_vol,out_hdr,out_stor_hdr,out_time_coord, out_time_widths = Minc2.read_minc_volume_std_4D(joinpath(tmp,"test1.mnc"), Float64)
+        out_vol, out_hdr, out_stor_hdr = Minc2.read_minc_volume_std(joinpath(tmp,"test1.mnc"), Float64)
+        out_time_coord, out_time_widths, out_irregular_time = Minc2.extract_time_info(out_hdr)
 
         @test in_hdr.dims == out_hdr.dims
         @test in_hdr.start == out_hdr.start
@@ -405,6 +376,7 @@ end
         @test in_vol ≈ out_vol
         @test in_time_coord ≈ out_time_coord
         @test in_time_widths ≈ out_time_widths
+        @test in_irregular_time == out_irregular_time
     end
 end
 
@@ -420,6 +392,7 @@ end
         @test Minc2.array(v) ≈ Minc2.array(v2)
         @test v.time_coords ≈ v2.time_coords
         @test v.time_widths ≈ v2.time_widths
+
         # spatial geometry preserved
         s1, st1, dc1 = Minc2.decompose(Minc2.voxel_to_world(v))
         s2, st2, dc2 = Minc2.decompose(Minc2.voxel_to_world(v2))
@@ -458,6 +431,14 @@ end
 end
 
 
+@testset "Volume4D reading from 3D volume" begin
+    v = Minc2.read_volume_4D("input/t1_z+_float_cor.mnc")
+    @test v.irregular_time == false
+    @test v.time_coords == [0.0]
+    @test v.time_widths == [1.0]
+    @test size(Minc2.array(v)) == (30,40,10,1)
+end
+
 @testset "Writing 3D volume in short" begin
     mktempdir() do tmp
         in_vol,in_hdr,in_stor_hdr=Minc2.read_minc_volume_std("input/t1_z+_double_cor.mnc", Float64)
@@ -471,23 +452,6 @@ end
         @test in_hdr.step == out_hdr.step
         @test in_hdr.dir_cos == out_hdr.dir_cos
         @test in_vol ≈ out_vol atol=0.1
-    end
-end
-
-
-@testset "Reading 4D volume in double" begin
-    mktempdir() do tmp
-        in_vol, in_hdr, in_stor_hdr, time_coords, time_widths = Minc2.read_minc_volume_std_4D("input/test_4D.mnc", Float64)
-
-        # Minc2.write_minc_volume_std(joinpath(tmp,"test1.mnc"), Int16, in_stor_hdr, in_vol)
-
-        # out_vol,out_hdr,out_stor_hdr = Minc2.read_minc_volume_std(joinpath(tmp,"test1.mnc"), Float64)
-
-        # @test in_hdr.dims == out_hdr.dims
-        # @test in_hdr.start == out_hdr.start
-        # @test in_hdr.step == out_hdr.step
-        # @test in_hdr.dir_cos == out_hdr.dir_cos
-        # @test in_vol ≈ out_vol atol=0.1
     end
 end
 

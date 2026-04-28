@@ -291,12 +291,17 @@ Read Volume4D from minc file
 * `store` - underlying array type
 """
 function read_volume_4D(fn::String; store::Type{T}=Float64)::Volume4D{T} where {T}
-    in_vol, in_hdr, in_store_hdr, time_coords, time_widths, in_history = read_minc_volume_std_history_4D(fn, store)
-    v2w = voxel_to_world(in_hdr)
-    
-    time_idx = findfirst(==(DIM_TIME), in_store_hdr.axis)
-    irregular_time = time_idx !== nothing && in_store_hdr.irregular[time_idx]
+    in_vol, in_hdr, in_store_hdr, in_history = read_minc_volume_std_history(fn, store)
 
+    time_coords, time_widths, irregular_time = extract_time_info(in_hdr)
+    
+    v2w = voxel_to_world(in_hdr)
+
+    # deal with 3D volumes
+    if ndims(in_vol) == 3 
+        in_vol = reshape(in_vol, size(in_vol)..., 1)
+    end
+    
     return Volume4D(in_vol, v2w, time_coords, time_widths, in_history, irregular_time)
 end
 
@@ -340,6 +345,28 @@ function empty_volume_like(
     out_vol = similar(vol.vol, store)
     return Volume3D(out_vol, vol.v2w, isnothing(history) ? vol.history : history )
 end
+
+
+"""
+    empty_volume_like(
+        vol::Volume4D{T1}; 
+        store::Type{T}=Float64, 
+        history=nothing)
+
+Create an empty Volume4D
+
+* `vol` - Volume4D that is used for sampling information
+* `store` - underlying array type
+* `history` - minc history
+"""
+function empty_volume_like(
+        vol::Volume4D{T1}; 
+        store::Type{T}=Float64, 
+        history=nothing) where {T1,T}
+    out_vol = similar(vol.vol, store)
+    return Volume4D(out_vol, vol.v2w, vol.time_coords, vol.widths, isnothing(history) ? vol.history : history,vol.irregular_time )
+end
+
 
 
 """
@@ -387,6 +414,29 @@ function full_volume_like(
 end
 
 
+"""
+    full_volume_like(
+        vol::Volume4D{T1}; 
+        store::Type{T}=Float64, 
+        history=nothing)
+
+Create an empty Volume4D
+
+* `vol` - Volume4D that is used for sampling information
+* `store` - underlying array type
+* `history` - minc history
+"""
+function full_volume_like(
+        vol::Volume4D{T1},
+        fill::T=zero(T); 
+        history=nothing) where {T1,T}
+
+    out_vol = fill(fill, size(vol.vol))
+    return Volume3D(out_vol, vol.v2w, vol.coords, vol.widths, isnothing(history) ? vol.history : history,vol.irregular_time )
+
+end
+
+
 
 """
     save_volume(fn::AbstractString, 
@@ -413,12 +463,13 @@ function save_volume(fn::AbstractString,
 
     write_minc_volume_std(fn, store, 
       create_header_from_v2w(size(vol.vol), vol.v2w, 
-      vector_dim=(length(size(vol.vol))==4)), vol.vol; history=_history)
+        vector_dim=(length(size(vol.vol))==4)), 
+        vol.vol; history=_history)
 end
 
 
 """
-    save_volume_4D(fn::AbstractString, 
+    save_volume(fn::AbstractString, 
         vol::Volume4D{T,N}; 
         store::Type{S}=Float32,
         history=nothing,
@@ -433,7 +484,7 @@ preserved for irregular time sampling.
 * `history` - additional history string
 * `like` - optional: use existing MINC file as template for metadata (attributes, etc.)
 """
-function save_volume_4D(fn::AbstractString,
+function save_volume(fn::AbstractString,
         vol::Volume4D{T};
         store::Type{S}=Float32,
         history=nothing,
@@ -457,11 +508,11 @@ function save_volume_4D(fn::AbstractString,
                                  time_coords=vol.irregular_time ? vol.time_coords : nothing,
                                  time_widths=vol.irregular_time ? vol.time_widths : nothing)
 
-    write_minc_volume_std_4D(fn, store, hdr, vol.irregular_time ? vol.time_coords : nothing, 
-                             vol.irregular_time ? vol.time_widths : nothing, vol.vol;
-                             history=_history, like=like)
+    write_minc_volume_std(fn, store, hdr, vol.vol; history=_history, like=like)
 end
 
+# for consistency
+save_volume_4D=save_volume
 
 
 """
@@ -882,7 +933,7 @@ function spatial_resample_volume!(
         out_vol
     end
 
-function spatial_resample_volume!(
+function resample_volume!(
         in_vol::Volume4D{T},
         out_vol::Volume4D{T};
         itfm::Union{Vector{XFM}, XFM, Nothing}=nothing, 
@@ -908,6 +959,21 @@ function spatial_resample_volume!(
 
     return out_vol
 end
+
+function resample_volume(
+        in_vol::Volume4D{T};
+        like::Union{Volume4D{O},Nothing}=nothing,
+        itfm::Union{Vector{XFM}, XFM, Nothing}=nothing, 
+        fill=0.0, order=1)::Volume4D{T} where {T,O, XFM<:AnyTransform}
+
+    out_vol = empty_volume_like( isnothing(like) ? in_vol : like ;
+    store = (isnothing(like) ? eltype(in_vol.vol) : eltype(like.vol) ) )
+
+    resample_volume!(in_vol, out_vol; itfm, fill, order)
+
+    return out_vol
+end
+
 
 
 """

@@ -272,8 +272,8 @@ function minc2_load_and_convert_complete_volume(h::VolumeHandle,
 end
 
 function minc2_load_and_convert_complete_volume(h::VolumeHandle,
-                                                volume::Array{Tin},
-                                                ::Type{Tout}) where {Tin<:Number,Tout<:Number}
+        volume::Array{Tin},
+        ::Type{Tout}) where {Tin<:Number,Tout<:Number}
     @minc2_check minc2_load_complete_volume(h.x,
         Base.unsafe_convert(Ptr{Cvoid}, volume),
         julia_to_minc2[Type{Tin}])
@@ -281,14 +281,14 @@ function minc2_load_and_convert_complete_volume(h::VolumeHandle,
 end
 
 function read_minc_volume_raw(h::VolumeHandle,
-                              dtype::Type{T}=Float32)::Tuple{Array{T},MincHeader} where T<:Number
+        dtype::Type{T}=Float32)::Tuple{Array{T},MincHeader} where T<:Number
     fdtype = representation_type(h)
     volume, store_hdr = empty_like_minc_volume_raw(h, fdtype.parameters[1])
     return minc2_load_and_convert_complete_volume(h, volume, dtype), store_hdr
 end
 
 function empty_like_minc_volume_std(h::VolumeHandle,
-                                    ::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader} where T<:Number
+        ::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader} where T<:Number
     setup_standard_order(h)
     store_hdr = store_header(h)
     hdr       = representation_header(h)
@@ -297,36 +297,10 @@ function empty_like_minc_volume_std(h::VolumeHandle,
 end
 
 function read_minc_volume_std(h::VolumeHandle,
-                              dtype::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader} where T<:Number
+        dtype::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader} where T<:Number
     fdtype = representation_type(h)
     volume, hdr, store_hdr = empty_like_minc_volume_std(h, fdtype.parameters[1])
     return minc2_load_and_convert_complete_volume(h, volume, dtype), hdr, store_hdr
-end
-
-function read_minc_volume_std_4D(h::VolumeHandle,
-                              dtype::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader,Vector{Float64},Vector{Float64}} where T<:Number
-    fdtype = representation_type(h)
-    volume, hdr, store_hdr = empty_like_minc_volume_std(h, fdtype.parameters[1])
-    vol = minc2_load_and_convert_complete_volume(h, volume, dtype)
-    
-    # Find time dimension index
-    time_idx = findfirst(==(DIM_TIME), store_hdr.axis)
-    
-    # Get time coordinates and widths from header
-    if time_idx !== nothing && store_hdr.irregular[time_idx]
-        # Irregular dimension: offsets/widths from header
-        time_coord = store_hdr.offsets[time_idx]
-        time_widths = store_hdr.widths[time_idx]
-    else
-        # Regular dimension: compute from start/step
-        n = store_hdr.dims[time_idx]
-        start = store_hdr.start[time_idx]
-        step = store_hdr.step[time_idx]
-        time_coord = [start + (i-1)*step for i in 1:n]
-        time_widths = fill(step, n)
-    end
-
-    return vol, hdr, store_hdr, time_coord, time_widths
 end
 
 # Path-based helpers (open/close internally)
@@ -351,7 +325,7 @@ function empty_like_minc_volume_std_history(path::String,
 end
 
 function read_minc_volume_std(path::String,
-                              ::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader} where T<:Number
+        ::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader} where T<:Number
     handle = open_minc_file(path)
     volume, hdr, store_hdr = read_minc_volume_std(handle, T)
     close_minc_file(handle)
@@ -361,7 +335,7 @@ end
 
 
 function read_minc_volume_std_history(path::String,
-                                      ::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader,Union{String,Nothing}} where T<:Number
+        ::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader,Union{String,Nothing}} where T<:Number
     handle = open_minc_file(path)
     volume, hdr, store_hdr = read_minc_volume_std(handle, T)
     history = read_history(handle)
@@ -371,27 +345,8 @@ function read_minc_volume_std_history(path::String,
 end
 
 
-function read_minc_volume_std_history_4D(path::String,
-        ::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader,Vector{Float64},Vector{Float64},Union{String,Nothing}} where T<:Number
-    handle = open_minc_file(path)
-    volume, hdr, store_hdr, time_coords, time_widths = read_minc_volume_std_4D(handle, T)
-    history = read_history(handle)
-    close_minc_file(handle)
-    finalize(handle)
-    return volume, hdr, store_hdr, time_coords, time_widths, history
-end
-
-function read_minc_volume_std_4D(path::String,
-        ::Type{T}=Float32)::Tuple{Array{T},MincHeader,MincHeader,Vector{Float64},Vector{Float64}} where T<:Number
-    handle = open_minc_file(path)
-    volume, hdr, store_hdr, time_coords, time_widths = read_minc_volume_std_4D(handle, T)
-    close_minc_file(handle)
-    finalize(handle)
-    return volume, hdr, store_hdr, time_coords, time_widths
-end
-
 function empty_like_minc_volume_raw(path::String,
-                                    ::Type{T}=Float32)::Tuple{Array{T},MincHeader} where T<:Number
+        ::Type{T}=Float32)::Tuple{Array{T},MincHeader} where T<:Number
     handle = open_minc_file(path)
     volume, store_hdr = empty_like_minc_volume_raw(handle, T)
     close_minc_file(handle)
@@ -400,7 +355,7 @@ function empty_like_minc_volume_raw(path::String,
 end
 
 function read_minc_volume_raw(path::String,
-                              ::Type{T}=Float32)::Tuple{Array{T},MincHeader} where T<:Number
+        ::Type{T}=Float32)::Tuple{Array{T},MincHeader} where T<:Number
     handle = open_minc_file(path)
     volume, store_hdr = read_minc_volume_raw(handle, T)
     close_minc_file(handle)
@@ -409,7 +364,7 @@ function read_minc_volume_raw(path::String,
 end
 
 function read_minc_volume_raw_history(path::String,
-                                      ::Type{T}=Float32) where T<:Number
+        ::Type{T}=Float32) where T<:Number
     handle = open_minc_file(path)
     volume, store_hdr = read_minc_volume_raw(handle, T)
     history = read_history(handle)
@@ -753,64 +708,22 @@ function write_minc_volume_std(path::String, ::Type{Store},
     return nothing
 end
 
-# NOTE: Irregular dimension offsets/widths must be set in the header before calling
-# define_minc_file. The C library writes dimension variables automatically during define.
-# time_coords/time_widths parameters are deprecated - use store_hdr.offsets/store_hdr.widths
-function write_minc_volume_std_4D(path::String, ::Type{Store},
-                               store_hdr::Union{MincHeader,Nothing},
-                               time_coords::Union{Vector{Float64},Nothing},
-                               time_widths::Union{Vector{Float64},Nothing},
-                               volume::Array{Repr};
-                               like::Union{String,Nothing}=nothing,
-                               history::Union{String,Nothing}=nothing
-                               ) where {Store,Repr}
-    hdr = store_hdr
-    # Backward compatibility: if time_coords provided but header not irregular, update header
-    if time_coords !== nothing && store_hdr !== nothing
-        time_idx = findfirst(==(DIM_TIME), store_hdr.axis)
-        if time_idx !== nothing && !store_hdr.irregular[time_idx]
-            hdr = MincHeader(length(store_hdr.dims))
-            hdr.dims = copy(store_hdr.dims)
-            hdr.start = copy(store_hdr.start)
-            hdr.step = copy(store_hdr.step)
-            hdr.dir_cos = copy(store_hdr.dir_cos)
-            hdr.dir_cos_valid = copy(store_hdr.dir_cos_valid)
-            hdr.axis = copy(store_hdr.axis)
-            hdr.irregular = copy(store_hdr.irregular)
-            hdr.offsets = copy(store_hdr.offsets)
-            hdr.widths = copy(store_hdr.widths)
-            hdr.irregular[time_idx] = true
-            hdr.offsets[time_idx] = copy(time_coords)
-            hdr.widths[time_idx] = time_widths !== nothing ? copy(time_widths) : fill(1.0, length(time_coords))
-        end
-    end
-    
-    if isnothing(like)
-        handle = define_minc_file(hdr, Store, Repr)
-        create_minc_file(handle, path)
-        if !isnothing(history)
-            write_history(handle, history)
-        end
-        write_minc_volume_std(handle, volume)
-        close_minc_file(handle)
-        finalize(handle)
-    else
-        in_h = open_minc_file(like)
-        store_hdr2 = store_header(in_h)
-        handle = define_minc_file(store_hdr2, Store, Repr)
-        create_minc_file(handle, path)
-        copy_minc_metadata(in_h, handle)
-        if !isnothing(history)
-            write_history(handle, history)
-        end
-        write_minc_volume_std(handle, volume)
-        close_minc_file(in_h)
-        close_minc_file(handle)
-        finalize(handle)
-    end
-    return nothing
-end
 
+function extract_time_info(store_hdr::MincHeader)
+    time_idx = findfirst(==(DIM_TIME), store_hdr.axis)
+    if time_idx === nothing
+        return Float64[0.0], Float64[1.0], false
+    elseif store_hdr.irregular[time_idx]
+        return store_hdr.offsets[time_idx], store_hdr.widths[time_idx], true
+    else
+        n = store_hdr.dims[time_idx]
+        start = store_hdr.start[time_idx]
+        step = store_hdr.step[time_idx]
+        time_coords = [start + (i-1)*step for i in 1:n]
+        time_widths = fill(step, n)
+        return time_coords, time_widths, false
+    end
+end
 
 
 function write_minc_volume_raw(path::String, ::Type{Store},
