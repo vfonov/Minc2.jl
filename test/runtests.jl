@@ -420,7 +420,7 @@ end
         v = Minc2.read_volume_4D("input/test_4D_irregular_offsets.mnc")
         @test v.irregular_time == true
         
-        path = joinpath(tmp, "test_irregular.mnc")
+        path = joinpath("debug", "test_irregular.mnc")
         Minc2.save_volume_4D(path, v; store=Float64)
         
         v2 = Minc2.read_volume_4D(path)

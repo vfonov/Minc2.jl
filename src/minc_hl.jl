@@ -500,6 +500,8 @@ function save_volume(fn::AbstractString,
     time_step  = length(vol.time_coords) > 1 ?
         (vol.time_coords[end] - vol.time_coords[1]) / (length(vol.time_coords) - 1) :
         1.0
+    
+    @info "saving 4D volume " time_start time_step 
 
     hdr = create_header_from_v2w(size(vol.vol), vol.v2w;
                                  time_dim=true,

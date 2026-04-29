@@ -644,6 +644,10 @@ function create_header_from_v2w(sz,
 
     hdr = MincHeader(3 + vector_dim + time_dim)
 
+    if time_dim && time_coords !== nothing && length(time_coords) != sz[4 + vector_dim ]
+        @error "Unexpected length of time coordinates: $(length(time_coords)) != $(sz[4 + vector_dim ])"
+    end
+
     for i = 1:length(sz)
         hdr.dims[i] = sz[i]
         if vector_dim && i == 1
