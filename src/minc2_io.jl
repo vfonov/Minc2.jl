@@ -639,31 +639,36 @@ function create_header_from_v2w(sz,
                                 time_step::Union{Float64,Nothing}=nothing,
                                 time_start::Union{Float64,Nothing}=nothing,
                                 time_coords::Union{Vector{Float64},Nothing}=nothing,
-                                time_widths::Union{Vector{Float64},Nothing}=nothing)::MincHeader where T
+                                time_widths::Union{Vector{Float64},Nothing}=nothing,
+                                irregular_time::Bool=false)::MincHeader where T
     start, step, dir_cos = decompose(t)
 
     hdr = MincHeader(3 + vector_dim + time_dim)
 
-    if time_dim && time_coords !== nothing && length(time_coords) != sz[4 + vector_dim ]
+    if time_dim && !isnothing(time_coords)  && length(time_coords) != sz[4 + vector_dim ]
         @error "Unexpected length of time coordinates: $(length(time_coords)) != $(sz[4 + vector_dim ])"
     end
 
     for i = 1:length(sz)
         hdr.dims[i] = sz[i]
-        if vector_dim && i == 1
+        if vector_dim && i == 1 # Vector dimension is the first dimension if present
             hdr.start[i] = 0
             hdr.step[i]  = 1.0
             hdr.dir_cos_valid[i] = false
             hdr.dir_cos[i, :] .= 0.0
             hdr.axis[i] = DIM_VEC
-        elseif time_dim && (i - vector_dim) == 4
+        elseif time_dim && (i - vector_dim) == 4 # Time dimension is the 4th dimension after vector dim
             hdr.axis[i]  = DIM_TIME
-            if time_coords !== nothing && length(time_coords) == sz[i]
-                hdr.irregular[i] = true
+            hdr.irregular[i] = irregular_time
+
+            if !isnothing(time_coords) 
                 hdr.offsets[i] = copy(time_coords)
-                hdr.widths[i] = time_widths !== nothing ? copy(time_widths) : fill(1.0, sz[i])
+                hdr.widths[i] = !isnothing(time_widths) ? copy(time_widths) : fill(1.0, sz[i])
                 hdr.start[i] = time_coords[1]
-                hdr.step[i] = 1.0
+
+                hdr.step[i]  = length(time_coords) > 1 ?
+                    (time_coords[end] - time_coords[1]) / (length(time_coords) - 1) :
+                    1.0
             else
                 hdr.step[i]  = isnothing(time_step) ? 1.0 : time_step
                 hdr.start[i] = isnothing(time_start) ? 0.0 : time_start

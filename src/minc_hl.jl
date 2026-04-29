@@ -496,20 +496,11 @@ function save_volume(fn::AbstractString,
         _history=(isnothing(vol.history) ? "" : vol.history * "\n" )*history
     end
 
-    time_start = isempty(vol.time_coords) ? 0.0 : vol.time_coords[1]
-    time_step  = length(vol.time_coords) > 1 ?
-        (vol.time_coords[end] - vol.time_coords[1]) / (length(vol.time_coords) - 1) :
-        1.0
-    
-    @info "saving 4D volume " time_start time_step 
-
     hdr = create_header_from_v2w(size(vol.vol), vol.v2w;
                                  time_dim=true,
-                                 time_step=time_step,
-                                 time_start=time_start,
-                                 time_coords=vol.irregular_time ? vol.time_coords : nothing,
-                                 time_widths=vol.irregular_time ? vol.time_widths : nothing)
-
+                                 time_coords=vol.time_coords,
+                                 time_widths=vol.time_widths,
+                                 irregular_time=vol.irregular_time, )
     write_minc_volume_std(fn, store, hdr, vol.vol; history=_history, like=like)
 end
 
