@@ -364,7 +364,7 @@ function empty_volume_like(
         store::Type{T}=Float64, 
         history=nothing) where {T1,T}
     out_vol = similar(vol.vol, store)
-    return Volume4D(out_vol, vol.v2w, vol.time_coords, vol.widths, isnothing(history) ? vol.history : history,vol.irregular_time )
+    return Volume4D(out_vol, vol.v2w, vol.time_coords, vol.time_widths, isnothing(history) ? vol.history : history, vol.irregular_time )
 end
 
 
@@ -432,7 +432,7 @@ function full_volume_like(
         history=nothing) where {T1,T}
 
     out_vol = fill(fill, size(vol.vol))
-    return Volume3D(out_vol, vol.v2w, vol.coords, vol.widths, isnothing(history) ? vol.history : history,vol.irregular_time )
+    return Volume3D(out_vol, vol.v2w, vol.time_coords, vol.time_widths, isnothing(history) ? vol.history : history,vol.irregular_time )
 
 end
 
