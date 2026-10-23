@@ -8,3 +8,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+libminc_jll = "dce2f2bf-0ed4-5a0e-8af7-a90b827a9344"
+
+[sources]
+libminc_jll = {rev = "main", url = "https://github.com/vfonov/libminc_jll.jl"}
